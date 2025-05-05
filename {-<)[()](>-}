@@ -1,1 +1,1669 @@
+local function EnableGefAttack()
+-- Script inside ServerScriptService
+
+local function disableTouchInterest()
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanTouch = true  -- This disables TouchInterest internally
+        end
+    end
+end
+
+-- Disable touch triggers on all parts at start
+disableTouchInterest()
+
+-- Disable touch triggers on any new parts added later
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("BasePart") then
+        descendant.CanTouch = true
+    end
+end)
+
+end
+
+local function NoneGefAttack()
+-- Script inside ServerScriptService
+
+local function disableTouchInterest()
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanTouch = false  -- This disables TouchInterest internally
+        end
+    end
+end
+
+-- Disable touch triggers on all parts at start
+disableTouchInterest()
+
+-- Disable touch triggers on any new parts added later
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("BasePart") then
+        descendant.CanTouch = false
+    end
+end)
+
+end
+
+local function AutoDrivev2()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local noclipEnabled = false
+local vnoclipParts = {}
+local charNoclipParts = {}
+
+local function getCharacter()
+    return player.Character or player.CharacterAdded:Wait()
+end
+
+
+local function findVehicle()
+    local character = getCharacter()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.SeatPart then
+        local seat = humanoid.SeatPart
+        local vehicleModel = seat.Parent
+        repeat
+            if vehicleModel.ClassName ~= "Model" then
+                vehicleModel = vehicleModel.Parent
+            end
+        until vehicleModel.ClassName == "Model"
+        return vehicleModel
+    end
+    return nil
+end
+
+
+local function enableNoclip()
+    vnoclipParts = {}
+    charNoclipParts = {}
+
+
+    local char = getCharacter()
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            table.insert(charNoclipParts, part)
+            part.CanCollide = false
+        end
+    end
+
+
+    local vehicle = findVehicle()
+    if vehicle then
+        for _, v in pairs(vehicle:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then
+                table.insert(vnoclipParts, v)
+                v.CanCollide = false
+            end
+        end
+    end
+end
+
+-- Disable noclip
+local function disableNoclip()
+    -- Restore character parts
+    for _, part in pairs(charNoclipParts) do
+        if part and part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+    charNoclipParts = {}
+
+    -- Restore vehicle parts
+    for _, part in pairs(vnoclipParts) do
+        if part and part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+    vnoclipParts = {}
+end
+
+-- Toggle function
+local function toggleNoclip()
+    noclipEnabled = not noclipEnabled
+    if noclipEnabled then
+        enableNoclip()
+        clipButton.Text = "VNoclip ON"
+    else
+        disableNoclip()
+        clipButton.Text = "VNoclip OFF"
+    end
+end
+
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+--// PLAYER & CHARACTER
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local root = character:WaitForChild("HumanoidRootPart")
+
+--// UI SETUP
+local screenGui = Instance.new("ScreenGui", playerGui)
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0.2, 0, 0.2, 0)
+frame.Position = UDim2.new(0.4, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.new(0, 0, 0)
+frame.BorderColor3 = Color3.new(1, 1, 1)
+frame.BorderSizePixel = 0.5
+frame.BackgroundTransparency = 0.6
+
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Text = "Drive | Toggle"
+toggleButton.Size = UDim2.new(1, 0, 0.5, 0)
+toggleButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 14
+toggleButton.Position = UDim2.new(0, 0, 0, 0)
+
+local directionButton = Instance.new("TextButton", frame)
+directionButton.Text = "Direction | Forward"
+directionButton.Size = UDim2.new(1, 0, 0.5, 0)
+directionButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+directionButton.TextColor3 = Color3.new(1, 1, 1)
+directionButton.Font = Enum.Font.SourceSansBold
+directionButton.TextSize = 14
+directionButton.Position = UDim2.new(0, 0, 0.5, 0)
+
+local clipButton = Instance.new("TextButton", frame)
+clipButton.Text = "VNoclip Toggle"
+clipButton.Size = UDim2.new(1, 0, 0.5, 0)
+clipButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+clipButton.TextColor3 = Color3.new(1, 1, 1)
+clipButton.Font = Enum.Font.SourceSansBold
+clipButton.TextSize = 14
+clipButton.Position = UDim2.new(0, 0, 1, 0)
+
+local dragLabel = Instance.new("TextLabel", frame)
+dragLabel.Text = "Truck v2"
+dragLabel.Size = UDim2.new(1, 0, 0.5, 0)
+dragLabel.BackgroundTransparency = 1
+dragLabel.TextColor3 = Color3.new(1, 1, 1)
+dragLabel.Font = Enum.Font.SourceSansBold
+dragLabel.TextSize = 14
+dragLabel.TextScaled = true
+dragLabel.TextWrapped = true
+dragLabel.Position = UDim2.new(0, 0, -0.5, 0)
+
+--// DRAGGING SYSTEM
+local dragging = false
+local dragStart = nil
+local initialPosition = nil
+
+local function onInputBegan(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+        dragging = true
+        initialPosition = frame.Position
+        dragStart = input.Position
+    elseif input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        initialPosition = frame.Position
+        dragStart = input.Position
+    end
+end
+
+local function onInputEnded(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end
+
+local function onInputChanged(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        frame.Position = initialPosition + UDim2.new(0, delta.X, 0, delta.Y)
+    end
+end
+
+dragLabel.InputBegan:Connect(onInputBegan)
+dragLabel.InputEnded:Connect(onInputEnded)
+dragLabel.InputChanged:Connect(onInputChanged)
+
+--// CONVEYOR SETTINGS
+local conveyorSpeed = 10000000  -- Speed multiplier
+local conveyor = nil
+local isConveyorOn = false
+local isForward = true
+
+-- Spawn conveyor part
+local function spawnConveyor()
+    if conveyor then return end
+    conveyor = Instance.new("Part")
+    conveyor.Size = Vector3.new(1, 1, 1)
+    conveyor.Anchored = true
+    conveyor.CanCollide = false
+    conveyor.Transparency = 1
+    conveyor.Material = Enum.Material.Metal
+    conveyor.Color = Color3.fromRGB(100, 100, 255)
+    conveyor.Name = "InvisibleConveyor"
+    conveyor.Parent = workspace
+end
+
+-- Destroy conveyor part
+local function destroyConveyor()
+    if conveyor then
+        conveyor:Destroy()
+        conveyor = nil
+    end
+end
+
+--// UI BUTTON LOGIC
+
+toggleButton.MouseButton1Click:Connect(function()
+    isConveyorOn = not isConveyorOn
+    if isConveyorOn then
+        toggleButton.Text = "Drive | ON"
+    else
+        toggleButton.Text = "Drive | OFF"
+        destroyConveyor()
+    end
+end)
+
+directionButton.MouseButton1Click:Connect(function()
+    isForward = not isForward
+    if isForward then
+        directionButton.Text = "Direction | Forward"
+    else
+        directionButton.Text = "Direction | Backward"
+    end
+end)
+
+
+clipButton.MouseButton1Click:Connect(toggleNoclip)
+
+--// CONVEYOR LOOP (movement)
+RunService.RenderStepped:Connect(function()
+    if isConveyorOn and humanoid.Sit then
+        spawnConveyor()
+
+        local playerPosition = root.Position
+        local direction = isForward and root.CFrame.LookVector or -root.CFrame.LookVector
+
+        conveyor.CFrame = CFrame.lookAt(playerPosition, playerPosition + direction)
+
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Velocity += direction * conveyorSpeed
+            end
+        end
+    else
+        destroyConveyor()
+    end
+end)
+end
+
+-- Services
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create ScreenGui
+local introGui = Instance.new("ScreenGui")
+introGui.Parent = playerGui
+introGui.IgnoreGuiInset = true
+introGui.ResetOnSpawn = false
+
+-- Create black background frame
+local bg = Instance.new("Frame")
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.Position = UDim2.new(0, 0, 0, 0)
+bg.BackgroundColor3 = Color3.new(0, 0, 0)
+bg.BackgroundTransparency = 1  -- Start fully transparent
+bg.Parent = introGui
+
+-- Create title text
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.2, 0)
+title.Position = UDim2.new(0, 0, 0.4, 0)
+title.BackgroundTransparency = 1
+title.Text = "Thank For Using My Script!"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextTransparency = 1  -- Start invisible
+title.TextScaled = true
+title.Font = Enum.Font.GothamBlack
+title.Parent = introGui
+
+-- Optional: Add sound effect
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://9118823109"  -- Replace with your own sound ID
+sound.Volume = 2
+sound.Parent = introGui
+
+-- Play sound
+sound:Play()
+
+-- Fade in background slowly
+local bgFadeIn = TweenService:Create(bg, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0
+})
+bgFadeIn:Play()
+
+-- Wait for background to fade in, then fade in title
+bgFadeIn.Completed:Connect(function()
+    local titleFadeIn = TweenService:Create(title, TweenInfo.new(3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    })
+    titleFadeIn:Play()
+
+    -- Wait then fade out everything
+    task.wait(3)
+
+    local fadeOutBg = TweenService:Create(bg, TweenInfo.new(2), {
+        BackgroundTransparency = 1
+    })
+    local fadeOutTitle = TweenService:Create(title, TweenInfo.new(2), {
+        TextTransparency = 1
+    })
+
+    fadeOutBg:Play()
+    fadeOutTitle:Play()
+
+    -- Cleanup after fade
+    fadeOutBg.Completed:Connect(function()
+        introGui:Destroy()
+    end)
+end)
+
+task.wait(4)
+-- Services
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create ScreenGui
+local introGui = Instance.new("ScreenGui")
+introGui.Parent = playerGui
+introGui.IgnoreGuiInset = true
+introGui.ResetOnSpawn = false
+
+-- Create black background frame
+local bg = Instance.new("Frame")
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.Position = UDim2.new(0, 0, 0, 0)
+bg.BackgroundColor3 = Color3.new(0, 0, 0)
+bg.BackgroundTransparency = 1  -- Start fully transparent
+bg.Parent = introGui
+
+-- Create title text
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.2, 0)
+title.Position = UDim2.new(0, 0, 0.4, 0)
+title.BackgroundTransparency = 1
+title.Text = "Gef Road Script Injecting :D"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextTransparency = 1  -- Start invisible
+title.TextScaled = true
+title.Font = Enum.Font.GothamBlack
+title.Parent = introGui
+
+-- Optional: Add sound effect
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://9118823109"  -- Replace with your own sound ID
+sound.Volume = 2
+sound.Parent = introGui
+
+-- Play sound
+sound:Play()
+
+-- Fade in background slowly
+local bgFadeIn = TweenService:Create(bg, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0
+})
+bgFadeIn:Play()
+
+-- Wait for background to fade in, then fade in title
+bgFadeIn.Completed:Connect(function()
+    local titleFadeIn = TweenService:Create(title, TweenInfo.new(3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    })
+    titleFadeIn:Play()
+
+    -- Wait then fade out everything
+    task.wait(3)
+
+    local fadeOutBg = TweenService:Create(bg, TweenInfo.new(2), {
+        BackgroundTransparency = 1
+    })
+    local fadeOutTitle = TweenService:Create(title, TweenInfo.new(2), {
+        TextTransparency = 1
+    })
+
+    fadeOutBg:Play()
+    fadeOutTitle:Play()
+
+    -- Cleanup after fade
+    fadeOutBg.Completed:Connect(function()
+        introGui:Destroy()
+    end)
+end)
+
+task.wait()
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Gef Road | by Gab tv",
+   Icon = 0, --  in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "Gef hub | by gab tv",
+   LoadingSubtitle = "Loading....",
+   Theme = "AmberGlow", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = true, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Gef Road | By Gab tv"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+local Tab = Window:CreateTab("Home", 4483362458) -- Title, Image
+local function JumpGlitch() 
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+local function onCharacterAdded(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        -- Check JumpPower to ensure the character can jump
+        if humanoid.JumpPower > 0 then
+            humanoid.Jump = true
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        else
+            warn("Humanoid JumpPower is 0. Check your character's settings.")
+        end
+    else
+        warn("Humanoid not found in character.")
+    end
+end
+
+localPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+--Handle case where character exists already
+if localPlayer.Character then
+    onCharacterAdded(localPlayer.Character)
+end
+end
+
+
+
+local Section = Tab:CreateSection("Pls Chat me On Youtube If by Script is bugging")
+local Button = Tab:CreateButton({
+   Name = "Infinite yeild",
+   Callback = function()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Fly Gui",
+   Callback = function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/junexd12/junexd12/refs/heads/main/Premium%20Fly%20gui"))()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Auto Drive Truck",
+   Callback = function()
+loadstring(game:HttpGet("https://pastebin.com/raw/bspWv2i1"))()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Auto Drive Truckv2",
+   Callback = function()
+AutoDrivev2()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Rejoin",
+   Callback = function()
+game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Delete Gui",
+   Callback = function()
+Rayfield:Destroy()
+   end,
+})
+
+local Tab2 = Window:CreateTab("Combat", 4483362458) -- Title, Image
+local Section = Tab2:CreateSection("Gefs")
+local Toggle = Tab2:CreateToggle({
+   Name = "Anti Gefs (Attack)",
+   CurrentValue = false,
+   Flag = "AntiGefs(Attack)", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if Value == true then
+AntiGefAttack = true
+else
+AntiGefAttack = false
+
+EnableGefAttack()
+end
+while AntiGefAttack do
+NoneGefAttack()
+task.wait(0.001)
+end
+   end,
+})
+local Toggle = Tab2:CreateToggle({
+   Name = "Gefs Hitbox",
+   CurrentValue = false,
+   Flag = "GefsHitbox", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if Value == true then
+GefsHitbox = true
+else
+GefsHitbox = false
+
+for _, gef in pairs(workspace.GEFs:GetChildren()) do
+    local hitbox = gef:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+    hitbox.Size = Vector3.new(5.95, 5.95, 5.95)
+    hitbox.Transparency = 1
+    end
+end
+end
+while GefsHitbox do
+for _, gef in pairs(workspace.GEFs:GetChildren()) do
+    local hitbox = gef:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+        hitbox.Size = Vector3.new(20, 20, 20)
+        hitbox.Transparency = 0.8
+    end
+end
+task.wait()
+end
+   end,
+})
+local Section = Tab2:CreateSection("Kill Aura")
+local Button = Tab2:CreateButton({
+   Name = "Auto Kill All Gefs",
+   Callback = function()
+local toggle = true         -- Set to true to enable
+local waitTime = 5          -- Customize how long to wait for each GEF to spawn (in seconds)
+
+local gefsFolder = workspace:WaitForChild("GEFs")
+
+-- Function to kill a GEF after waiting
+local function killGEF(gef)
+	if not toggle then return end
+	task.delay(waitTime, function()
+		local health = gef:FindFirstChild("Health")
+		if health and health:IsA("NumberValue") then
+			health.Value = -math.huge
+		end
+	end)
+end
+
+-- Run on existing GEFs
+if toggle then
+	for _, gef in pairs(gefsFolder:GetChildren()) do
+		killGEF(gef)
+	end
+end
+
+-- Detect new GEFs and kill them after custom wait
+gefsFolder.ChildAdded:Connect(function(gef)
+	if toggle then
+		killGEF(gef)
+	end
+end)
+   end,
+})
+local Section = Tab2:CreateSection("Others")
+local Button = Tab2:CreateButton({
+   Name = "Bring All Gefs",
+   Callback = function()
+local PosPlayer = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+
+-- Loop through all children of workspace.GEFs
+for _, gef in pairs(workspace.GEFs:GetChildren()) do
+    -- Check if the child has a RootPart and handle it
+    if gef:FindFirstChild("RootPart") then
+        -- Move the RootPart to the player's position
+        gef.RootPart.CFrame = PosPlayer
+        
+        -- Set properties
+        gef.RootPart.CanCollide = true
+        gef.RootPart.Anchored = true
+    end
+end
+   end,
+})
+local Button = Tab2:CreateButton({
+   Name = "Freeze All Gefs",
+   Callback = function()
+local function FreezeGefs()
+for _, model in pairs(workspace.GEFs:GetChildren()) do
+    if model:FindFirstChild("Hitbox", true) then
+        local hitbox = model:FindFirstChild("Hitbox", true)
+        if hitbox:IsA("BasePart") then
+            hitbox.Anchored = true
+        end
+    end
+end
+end
+
+FreezeGefs()
+   end,
+})
+local Button = Tab2:CreateButton({
+   Name = "Delete Gefs",
+   Callback = function()
+workspace.GEFs:destroy()
+   end,
+})
+
+local Section = Tab2:CreateSection("Adjustable")
+local Label = Tab2:CreateLabel("This Script Adjust the Size of Ur Tools", 4483362458, Color3.fromRGB(220, 130, 60), false)
+local Slider = Tab2:CreateSlider({
+   Name = "Tool Reach",
+   Range = {0, 80},
+   Increment = 0.1,
+   Suffix = "Tools",
+   CurrentValue = 10,
+   Flag = "Toolreach", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+        if v:IsA("Tool") then
+            local selectionBox = Instance.new("SelectionBox", v.Handle)
+            selectionBox.Adornee = v.Handle
+            v.Handle.Size = Vector3.new(Value, Value, Value)
+            v.GripPos = Vector3.new(0, 0, 0)
+        end
+    end
+   end,
+})
+local Section = Tab2:CreateSection("Melee")
+local Label = Tab2:CreateLabel("Recommend", 4483362458, Color3.fromRGB(220, 130, 60), false)
+local Button = Tab2:CreateButton({
+   Name = "Inf Bat Damage",
+   Callback = function()
+game:GetService("Players").LocalPlayer.Backpack.Bat.Damage.Value = 99999999999999999
+   end,
+})
+local Input = Tab2:CreateInput({
+   Name = "Edit Bat Damage",
+   CurrentValue = "Unknown",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "BatDamage",
+   Callback = function(txt)
+game:GetService("Players").LocalPlayer.Backpack.Bat.Damage.Value = txt
+   end,
+})
+local Button = Tab2:CreateButton({
+   Name = "Inf Crowbar Damage",
+   Callback = function()
+game:GetService("Players").LocalPlayer.Backpack.Crowbar.Damage.Value = 99999999999999999
+   end,
+})
+local Input = Tab2:CreateInput({
+   Name = "Edit Crowbar Damage",
+   CurrentValue = "Unknown",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "CrowbarDamage",
+   Callback = function(txt)
+game:GetService("Players").LocalPlayer.Backpack.Crowbar.Damage.Value = txt
+   end,
+})
+
+
+
+
+local Tab3 = Window:CreateTab("Items", 4483362458) -- Title, Image
+local function CrateHitbox()
+local player = game.Players.LocalPlayer
+local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+if hrp then
+    for _, descendant in ipairs(workspace.Buildings:GetDescendants()) do
+        if descendant.Name == "Hitbox" and descendant:IsA("BasePart") then
+            local parent = descendant.Parent
+            if parent and parent.Name == "Crate" then
+                descendant.CFrame = hrp.CFrame
+            end
+        end
+    end
+end
+end
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()  --Wait for character to load
+
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+
+
+local function GetCrowbar()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Crowbar.CFrame
+task.wait(0.5)
+loadstring(game:HttpGet("https://pastebin.com/raw/FnGkpG8t"))()
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local function GetBat()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Bat.CFrame
+task.wait(0.5)
+loadstring(game:HttpGet("https://pastebin.com/raw/WFJgd7aa"))()
+wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local function GetHammer()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Hammer.CFrame
+task.wait(0.5)
+loadstring(game:HttpGet("https://pastebin.com/raw/aHxiki5f"))()
+wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = true
+end
+
+local function GetNewspapers()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Newspapers.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.Newspapers.ProximityPrompt)
+fireproximityprompt(workspace.Pickups.Newspapers.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local function GetHandgun()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Handgun.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.Handgun.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local function GetShotgun()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Shotgun.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.Shotgun.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local function GetStatue()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Statue.CFrame
+task.wait(0.5)
+
+loadstring(game:HttpGet("https://pastebin.com/raw/jwyp3qG1"))()
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+end
+
+local Section = Tab3:CreateSection("Shop Gui")
+local function EquipBat()
+
+  repeat task.wait() until game.Players.LocalPlayer.Backpack:WaitForChild("Bat")
+  local tool = game.Players.LocalPlayer.Backpack:FindFirstChild("Bat")
+  tool.Parent = game.Players.LocalPlayer.Character
+end
+
+local function EquipCrowbar()
+
+  repeat task.wait() until game.Players.LocalPlayer.Backpack:WaitForChild("Crowbar")
+  local tool = game.Players.LocalPlayer.Backpack:FindFirstChild("Crowbar")
+  tool.Parent = game.Players.LocalPlayer.Character
+end
+
+local Button = Tab3:CreateButton({
+   Name = "Open Upgrade Shop",
+   Callback = function()
+game:GetService("Players").LocalPlayer.PlayerGui.StartGui.Shop.Visible = true
+   end,
+})
+local Section = Tab3:CreateSection("Items")
+local Button = Tab3:CreateButton({
+   Name = "Hide Tools",
+   Callback = function()
+local function SaveTools()
+LP = game:GetService("Players").LocalPlayer
+
+for i,v in pairs(LP.Character:GetDescendants()) do
+if v:IsA("Tool") then
+v.Parent = LP
+end
+end
+end
+
+SaveTools()
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "UnHide Tools",
+   Callback = function()
+local function LoadTools()
+LP = game:GetService("Players").LocalPlayer
+
+for i,v in pairs(LP:GetChildren()) do
+if v:IsA("Tool") then
+v.Parent = LP.Backpack
+end
+end
+end
+
+LoadTools()
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Equip All Melee",
+   Callback = function()
+   local function BBB()
+   EquipBat()
+   EquipBat()
+   EquipBat()
+   EquipBat()
+   end
+   local function CCC()
+EquipCrowbar()
+EquipCrowbar()
+EquipCrowbar()
+EquipCrowbar()
+end
+
+BBB()
+CCC()
+   end,
+})
+
+local Section = Tab3:CreateSection("Guns")
+local Button = Tab3:CreateButton({
+   Name = "Get Shot gun",
+   Callback = function()
+GetShotgun()
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Handgun",
+   Callback = function()
+GetHandgun()
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Bullet",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Pickups.Bullets.CFrame
+task.wait(0.5)
+fireproximityprompt(workspace.Pickups.Bullets.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.2)
+humanoidRootPart.Massless = false
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Shells",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Pickups.Shells.CFrame
+task.wait(0.5)
+fireproximityprompt(workspace.Pickups.Shells.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.2)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Section = Tab3:CreateSection("Melee")
+local Button = Tab3:CreateButton({
+   Name = "Get Bat",
+   Callback = function()
+GetBat()
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Crowbar",
+   Callback = function()
+GetCrowbar()
+   end,
+})
+
+
+
+local Section = Tab3:CreateSection("Food")
+local Button = Tab3:CreateButton({
+   Name = "Get Chocolate Bar",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Food.CFrame
+task.wait(0.5)
+
+fireproximityprompt(game.Workspace.Pickups.Food.ProximityPrompt)
+fireproximityprompt(game.Workspace.Pickups.Food.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = true
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Soda",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Soda.CFrame
+task.wait(0.5)
+fireproximityprompt(game.Workspace.Pickups.Soda.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+
+
+
+local Section = Tab3:CreateSection("Valuable")
+local Button = Tab3:CreateButton({
+   Name = "Get Statue",
+   Callback = function()
+GetStatue()
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Gold Tooth",
+   Callback = function()
+humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Pickups["Gold Tooth"].CFrame
+task.wait(0.5)
+fireproximityprompt(workspace.Pickups["Gold Tooth"].ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.2)
+humanoidRootPart.Massless = false
+   end,
+})
+local Button = Tab3:CreateButton({
+   Name = "Get Gnome",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Gnome.CFrame
+task.wait(0.5)
+fireproximityprompt(workspace.Pickups.Gnome.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Money",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Money.CFrame
+task.wait(0.5)
+fireproximityprompt(workspace.Pickups.Money.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Tincan",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups["Tin Can"].CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups["Tin Can"].ProximityPrompt)
+fireproximityprompt(workspace.Pickups["Tin Can"].ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Newspaper",
+   Callback = function()
+GetNewspapers()
+   end,
+})
+
+local Section = Tab3:CreateSection("WereHouse")
+local Button = Tab3:CreateButton({
+   Name = "Bring Crate Hitbox",
+   Callback = function()
+CrateHitbox()
+   end,
+})
+local Section = Tab3:CreateSection("Tools")
+local Button = Tab3:CreateButton({
+   Name = "Get Hammer",
+   Callback = function()
+GetHammer()
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get GPS",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.GPS.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.GPS.ProximityPrompt)
+fireproximityprompt(workspace.Pickups.GPS.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Medkit",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Medkit.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.Medkit.ProximityPrompt)
+fireproximityprompt(workspace.Pickups.Medkit.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+local Button = Tab3:CreateButton({
+   Name = "Get Lantern",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Lantern.CFrame
+task.wait(0.5)
+
+fireproximityprompt(workspace.Pickups.Lantern.ProximityPrompt)
+fireproximityprompt(workspace.Pickups.Lantern.ProximityPrompt)
+
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+
+
+local Section = Tab3:CreateSection("Fuels")
+local Button = Tab3:CreateButton({
+   Name = "Get Gas",
+   Callback = function()
+   humanoidRootPart.Massless = true
+ItemPick = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Pickups.Gas.CFrame
+task.wait(0.5)
+fireproximityprompt(game.Workspace.Pickups.Gas.ProximityPrompt)
+task.wait(0.2)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ItemPick
+task.wait(0.1)
+humanoidRootPart.Massless = false
+   end,
+})
+
+
+
+
+
+local Tab4 = Window:CreateTab("Misc", 4483362458) -- Title, Image
+
+local function SpawnTools()
+Rayfield:Notify({
+   Title = "Melee Has been Spawned",
+   Content = "Food Has Been Spawned",
+   Duration = 0.3,
+   Image = 4483362458,
+})
+end
+
+local Section = Tab4:CreateSection("Spawn(Tools)/Respawn")
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local backpack = localPlayer.Backpack
+
+local function equipAllTools()
+  for _, tool in pairs(backpack:GetChildren()) do
+    if tool:IsA("Tool") then
+      local success, err = pcall(function()
+        tool.Parent = localPlayer.Character
+      end)
+      if not success then
+        print("Error equipping tool "..tool.Name..": "..err)
+      end
+    end
+  end
+end
+
+
+local Toggle = Tab4:CreateToggle({
+   Name = "Spawn Melee food (On spawn Only)",
+   CurrentValue = false,
+   Flag = "SpawnTool", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+    DD = Value
+    while DD do
+SpawnTools()
+game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Spawn"):FireServer()
+wait()
+end
+   end,
+})
+local Button = Tab4:CreateButton({
+   Name = "Respawn (Client Sided)",
+   Callback = function()
+Revive = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Spawn"):FireServer()
+task.wait(1.3)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Revive
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Revive
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Revive
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Revive
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Revive
+
+   end,
+})
+local Section = Tab4:CreateSection("Upgrades")
+local Toggle = Tab4:CreateToggle({
+   Name = "Upgrade To Max Stamina",
+   CurrentValue = false,
+   Flag = "MaxStamina", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+game:GetService("Players").LocalPlayer.Upgrades.MaxStamina.Value = 1000
+else
+game:GetService("Players").LocalPlayer.Upgrades.MaxStamina.Value = 70
+end
+   end,
+})
+local Toggle = Tab4:CreateToggle({
+   Name = "Upgrade To Max StaminaRegen",
+   CurrentValue = false,
+   Flag = "FastStaminaRegen", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+game:GetService("Players").LocalPlayer.Upgrades.StaminaRegen.Value = 99999999999999999999999999999999
+else
+game:GetService("Players").LocalPlayer.Upgrades.StaminaRegen.Value = 1
+end
+   end,
+})
+
+local Section = Tab4:CreateSection("Server Settings")
+local Input = Tab4:CreateInput({
+   Name = "Day Length",
+   CurrentValue = "300",
+   PlaceholderText = "Default Is 300",
+   RemoveTextAfterFocusLost = true,
+   Flag = "DayLength",
+   Callback = function(txt)
+game:GetService("ReplicatedStorage").ServerSettings.DayLength.Value = txt
+   end,
+})
+local Input = Tab4:CreateInput({
+   Name = "Night Length",
+   CurrentValue = "120",
+   PlaceholderText = "Default Is 120",
+   RemoveTextAfterFocusLost = true,
+   Flag = "NightLength",
+   Callback = function(txt)
+game:GetService("ReplicatedStorage").ServerSettings.NightLength.Value = txt
+   end,
+})
+local Input = Tab4:CreateInput({
+   Name = "TransitionTime/Time Speed | More Value Slower",
+   CurrentValue = "25",
+   PlaceholderText = "Default Is 25",
+   RemoveTextAfterFocusLost = true,
+   Flag = "TransitionTime",
+   Callback = function(txt)
+game:GetService("ReplicatedStorage").ServerSettings.TransitionTime.Value = txt
+   end,
+})
+local Section = Tab4:CreateSection("Game Sound")
+local Toggle = Tab4:CreateToggle({
+   Name = "Server Sound Mute/UnMute",
+   CurrentValue = false,
+   Flag = "Serversound", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+game:GetService("SoundService").Sound.Playing = false
+else
+game:GetService("SoundService").Sound.Playing = true
+end
+   end,
+})
+local Slider = Tab4:CreateSlider({
+   Name = "Server Sound Volume",
+   Range = {0, 10},
+   Increment = 0.1,
+   Suffix = "Volume",
+   CurrentValue = 0.1,
+   Flag = "Serversound2", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(s)
+game:GetService("SoundService").Sound.Volume = s
+   end,
+})
+local Section = Tab4:CreateSection("Others")
+local Toggle = Tab4:CreateToggle({
+   Name = "See Through Plank",
+   CurrentValue = false,
+   Flag = "SeeTroughPlank", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+PlankVisibility = true
+else
+PlankVisibility = false
+for _, plank in pairs(workspace.Planks:GetDescendants()) do
+    if plank:IsA("BasePart") and plank.Name == "Plank" then
+        plank.Transparency = 0.9
+    end
+end
+end
+while PlankVisibility do
+for _, plank in pairs(workspace.Planks:GetDescendants()) do
+    if plank:IsA("BasePart") and plank.Name == "Plank" then
+        plank.Transparency = 0.9
+    end
+end
+task.wait()
+end
+   end,
+})
+
+
+
+local Tab5 = Window:CreateTab("Character", 4483362458) -- Title, Image
+local Section = Tab5:CreateSection("Teleports")
+local Button = Tab5:CreateButton({
+   Name = "Mark Position",
+   Callback = function()
+MarkTp = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+   end,
+})
+
+local Button = Tab5:CreateButton({
+   Name = "Teleport To Marked Position",
+   Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = MarkTp
+   end,
+})
+
+local Section = Tab5:CreateSection("Truck")
+local Button = Tab5:CreateButton({
+   Name = "Teleport To Truck",
+   Callback = function()
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+wait(1)
+   end,
+})
+local Button = Tab5:CreateButton({
+   Name = "Bring Truck",
+   Callback = function()
+   TruckBring = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+task.wait(0.5)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TruckBring
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TruckBring
+JumpGlitch() 
+   end,
+})
+
+local Button = Tab5:CreateButton({
+   Name = "Glitch Truck",
+   Callback = function()
+   TruckGlitch = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = game:GetService("Workspace").Truck.Seat.CFrame
+wait(0.5)
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.workspace.Ground:GetChildren()[2].CFrame * CFrame.new(99999999, 9999, 9999)
+task.wait(0.001)
+JumpGlitch() 
+task.wait()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TruckGlitch
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TruckGlitch
+   end,
+})
+
+
+
+local Section = Tab5:CreateSection("Movement And Visual")
+local Slider = Tab5:CreateSlider({
+   Name = "Fov (Changer)",
+   Range = {0, 3000},
+   Increment = 0.1,
+   Suffix = "Feild Of View",
+   CurrentValue = 80,
+   Flag = "Fov1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+game.Workspace.Camera.FieldOfView = Value
+FieldOfView = Value
+   end,
+})
+local Input = Tab5:CreateInput({
+   Name = "Fov (Changer)",
+   CurrentValue = "80",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "Fov2",
+   Callback = function(Value)
+game.Workspace.Camera.FieldOfView = Value
+FieldOfView = Value
+   end,
+})
+local Input = Tab5:CreateInput({
+   Name = "WalkSpeed Bypass",
+   CurrentValue = "80",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "Speedbypass",
+   Callback = function(Value)
+while ToggleSpeed_1 do
+game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+wait()
+end
+   end,
+})
+local Toggle = Tab5:CreateToggle({
+   Name = "Toggle WalkSpeed Bypass",
+   CurrentValue = false,
+   Flag = "WSPTG", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   ToggleSpeed_1 = Value
+   end,
+})
+
+
+local Slider = Tab5:CreateSlider({
+   Name = "Hips Hieght",
+   Range = {0, 1000},
+   Increment = 0.1,
+   Suffix = "Hips Height",
+   CurrentValue = 2,
+   Flag = "HipValue1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+game.Players.LocalPlayer.Character.Humanoid.HipHeight = Value
+HipHeight = Value
+   end,
+})
+local Input = Tab5:CreateInput({
+   Name = "Hips height",
+   CurrentValue = "2",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "HipValue1",
+   Callback = function(Value)
+game.Players.LocalPlayer.Character.Humanoid.HipHeight = Value
+HipHeight = Value
+   end,
+})
+local Toggle = Tab5:CreateToggle({
+   Name = "Keep Hips height",
+   CurrentValue = false,
+   Flag = "HHKeep", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+KeepHipHeight = Value
+           while KeepHipHeight do
+              if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Players.LocalPlayer.Character.Humanoid.HipHeight ~= HipHeight then
+                  game.Players.LocalPlayer.Character.Humanoid.HipHeight  = HipHeight
+              end
+task.wait()
+         end
+   end,
+})
+
+
+
+
+local Slider = Tab5:CreateSlider({
+   Name = "Gravity",
+   Range = {0, 1000},
+   Increment = 0.1,
+   Suffix = "Gravity",
+   CurrentValue = 193,
+   Flag = "Gravity1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+game.Workspace.Gravity = Value
+Gravity = Value
+   end,
+})
+local Input = Tab5:CreateInput({
+   Name = "Gravity",
+   CurrentValue = "193",
+   PlaceholderText = "Value",
+   RemoveTextAfterFocusLost = true,
+   Flag = "Gravity2",
+   Callback = function(Value)
+game.Workspace.Gravity = Value
+Gravity = Value
+   end,
+})
+local Toggle = Tab5:CreateToggle({
+   Name = "Keep Gravity",
+   CurrentValue = false,
+   Flag = "GKeep", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+KeepGravity = Value
+           while KeepGravity do
+              if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") ~= nil and game.Workspace.Gravity ~= nil and game.Workspace.Gravity ~= Gravity then
+                  game.Workspace.Gravity = Gravity
+              end
+task.wait()
+         end
+   end,
+})
+
+
+
+local Tab6 = Window:CreateTab("Visual", 4483362458) -- Title, Image
+local function PlayerEspOn()
+Rayfield:Notify({
+   Title = "Toggle On",
+   Content = "Player Esp",
+   Duration = 6.5,
+   Image = 4483362458,
+})
+end
+
+local function FBnotification1()
+Rayfield:Notify({
+   Title = "Toggle On",
+   Content = "Fulbright",
+   Duration = 6.5,
+   Image = 4483362458,
+})
+end
+
+local function ToggleOff()
+Rayfield:Notify({
+   Title = "Switch",
+   Content = "Toggle Off",
+   Duration = 6.5,
+   Image = 4483362458,
+})
+end
+local Section = Tab6:CreateSection("Lighting")
+local Toggle = Tab6:CreateToggle({
+   Name = "Toggle Fullbright",
+   CurrentValue = false,
+   Flag = "FB", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+FB = true
+FBnotification1()
+else
+FB = false
+ToggleOff()
+game:GetService("Lighting").Brightness = 1
+    game:GetService("Lighting").ClockTime = 9
+    game:GetService("Lighting").FogEnd = 786543
+    game:GetService("Lighting").GlobalShadows = true
+end
+while FB do
+game:GetService("Lighting").Brightness = 5
+    game:GetService("Lighting").ClockTime = 12
+    game:GetService("Lighting").FogEnd = 786543
+    game:GetService("Lighting").GlobalShadows = false
+    wait()
+end
+   end,
+})
+local Section = Tab6:CreateSection("Esp")
+
+
+local Section = Tab6:CreateSection("Camera")
+local Toggle = Tab6:CreateToggle({
+   Name = "Game Shiftlock",
+   CurrentValue = false,
+   Flag = "GameSchiftlock", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+ScreenLock = true
+else
+ScreenLock = false
+wait(0.2)
+game:GetService("Players").LocalPlayer.MouseLock.Value = false
+end
+while ScreenLock do
+game:GetService("Players").LocalPlayer.MouseLock.Value = true
+    wait()
+end
+   end,
+})
+
+
+
+
+
+local Tab7 = Window:CreateTab("Credits", 4483362458) -- Title, Image
+local Label = Tab7:CreateLabel("Credits to Megaphonk266", 4483362458, Color3.fromRGB(220, 130, 60), false) -- Title, Icon, Color, IgnoreTheme
+local Paragraph = Tab7:CreateParagraph({Title = "Thanks For Using My Script", Content = "I Really Appreciate !"})
+
 
