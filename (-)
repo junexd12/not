@@ -1,3 +1,335 @@
+local truck = workspace:WaitForChild("Truck")
+local UIS = game:GetService("UserInputService")
+
+local HighlightEnabled = false -- Start OFF
+
+-- Function to highlight all parts
+local function highlightParts(model)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            -- Prevent double highlight
+            if descendant:FindFirstChild("HighlightEffect") then
+                descendant.HighlightEffect:Destroy()
+            end
+
+            -- Create Highlight
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "HighlightEffect"
+            highlight.Adornee = descendant
+            highlight.FillColor = Color3.fromRGB(255, 215, 0) -- Gold fill
+            highlight.OutlineColor = Color3.fromRGB(218, 165, 32) -- Darker gold outline
+            highlight.Parent = descendant
+        end
+    end
+end
+
+-- Function to remove all highlights
+local function removeHighlights(model)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            if descendant:FindFirstChild("HighlightEffect") then
+                descendant.HighlightEffect:Destroy()
+            end
+        end
+    end
+end
+
+-- Function to add text label
+local function addNameTag(model)
+    if model:FindFirstChild("TruckNameTag") then
+        model.TruckNameTag:Destroy()
+    end
+
+    local mainPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+    if not mainPart then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "TruckNameTag"
+    billboard.Adornee = mainPart
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = model
+
+    local label = Instance.new("TextLabel")
+    label.Parent = billboard
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "TRUCK"
+    label.TextColor3 = Color3.fromRGB(255, 215, 0)
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = 0.3
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+end
+
+-- Function to remove text label
+local function removeNameTag(model)
+    if model:FindFirstChild("TruckNameTag") then
+        model.TruckNameTag:Destroy()
+    end
+end
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local ESPEnabled = false -- Start OFF by default
+
+-- Function to create ESP name tag
+local function createESP(player)
+    if player == LocalPlayer then return end
+    local char = player.Character
+    if char and char:FindFirstChild("Head") then
+        local head = char.Head
+
+        -- Prevent double ESP
+        if head:FindFirstChild("NameEsp") then
+            head.NameEsp:Destroy()
+        end
+
+        -- Billboard GUI
+        local bill = Instance.new("BillboardGui")
+        bill.Name = "NameEsp"
+        bill.Adornee = head
+        bill.Size = UDim2.new(0, 200, 0, 50)
+        bill.AlwaysOnTop = true
+        bill.StudsOffset = Vector3.new(0, 2, 0)
+
+        -- Text Label
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Parent = bill
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = player.Name
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        nameLabel.TextStrokeTransparency = 0.3
+        nameLabel.TextScaled = true
+        nameLabel.Font = Enum.Font.SourceSansBold
+
+        -- Parent to head
+        bill.Parent = head
+    end
+end
+
+-- Function to remove ESP name tag
+local function removeESP(player)
+    if player == LocalPlayer then return end
+    local char = player.Character
+    if char and char:FindFirstChild("Head") then
+        local head = char.Head
+        if head:FindFirstChild("NameEsp") then
+            head.NameEsp:Destroy()
+        end
+    end
+end
+
+-- Toggle ESP ON (create)
+local function enableESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        createESP(player)
+    end
+    -- Also create ESP when players respawn
+    Players.PlayerAdded:Connect(function(p)
+        p.CharacterAdded:Connect(function()
+            if ESPEnabled then
+                task.wait(0.5) -- small wait to ensure character loads
+                createESP(p)
+            end
+        end)
+    end)
+    for _, p in ipairs(Players:GetPlayers()) do
+        p.CharacterAdded:Connect(function()
+            if ESPEnabled then
+                task.wait(0.5)
+                createESP(p)
+            end
+        end)
+    end
+end
+
+-- Toggle ESP OFF (destroy)
+local function disableESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        removeESP(player)
+    end
+end
+
+-- Toggle function
+local function EspallplayerLieNig()
+    ESPEnabled = not ESPEnabled
+    print("ESP Toggled:", ESPEnabled)
+    if ESPEnabled then
+        enableESP()
+    else
+        disableESP()
+    end
+end
+
+
+ 
+local pickupFolder = workspace:WaitForChild("Pickups")
+local highlightColor = Color3.fromRGB(0, 0, 0) -- Green highlight
+local labelColor = Color3.fromRGB(0, math.huge, math.huge) -- White text
+local labelSize = 14 -- Text size
+local offset = Vector3.new(0, 2, 0) -- Height offset for the label
+
+local ESPEnabled = false -- Toggle state
+
+-- Function to add highlight
+local function highlightPickup(obj)
+    -- Avoid duplicates
+    if not obj:FindFirstChild("PickupHighlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "PickupHighlight"
+        highlight.FillColor = highlightColor
+        highlight.OutlineColor = Color3.new(1, 1, 1)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = obj
+
+        -- Set Adornee
+        if obj:IsA("Model") then
+            if obj.PrimaryPart then
+                highlight.Adornee = obj.PrimaryPart
+            else
+                local part = obj:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    highlight.Adornee = part
+                end
+            end
+        elseif obj:IsA("BasePart") then
+            highlight.Adornee = obj
+        end
+    end
+end
+
+-- Function to add label
+local function addLabel(obj)
+    -- Avoid duplicates
+    if obj:FindFirstChild("PickupLabel") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "PickupLabel"
+    billboard.Adornee = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = offset
+    billboard.AlwaysOnTop = true
+    billboard.Parent = obj
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = obj.Name
+    textLabel.TextColor3 = labelColor
+    textLabel.TextSize = labelSize
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Parent = billboard
+end
+
+-- Function to remove ESP
+local function removeESP(obj)
+    local h = obj:FindFirstChild("PickupHighlight")
+    if h then h:Destroy() end
+
+    local l = obj:FindFirstChild("PickupLabel")
+    if l then l:Destroy() end
+end
+
+-- Toggle ESP on/off
+local function ItemEsp(state)
+    ESPEnabled = state
+    for _, obj in pairs(pickupFolder:GetChildren()) do
+        if ESPEnabled then
+            highlightPickup(obj)
+            addLabel(obj)
+        else
+            removeESP(obj)
+        end
+    end
+end
+
+-- Auto ESP for new pickups
+pickupFolder.ChildAdded:Connect(function(newObj)
+    if ESPEnabled then
+        highlightPickup(newObj)
+        addLabel(newObj)
+    end
+end)
+
+
+
+
+local targetFolder = workspace.GEFs -- Folder where the targets are
+local targetNames = { "Mini GEF", "Tiny GEF" } -- Only these names will get labels
+local labelColor = Color3.fromRGB(255, 0, 0) -- Red text
+local labelSize = 10 -- Font size (adjust this to make the label smaller)
+local offset = Vector3.new(0, 1, 0) -- How high above the object the label appears
+
+local ESPEnabled = false -- Toggle state
+
+-- Check if the name is in target list
+local function isTargetName(name)
+    for _, targetName in pairs(targetNames) do
+        if name == targetName then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to add label
+local function addLabel(obj)
+    if not isTargetName(obj.Name) then return end
+    if obj:FindFirstChild("ESPLabel") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPLabel"
+    billboard.Adornee = obj
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = offset
+    billboard.AlwaysOnTop = true
+    billboard.Parent = obj
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = obj.Name
+    textLabel.TextColor3 = labelColor
+    textLabel.TextSize = labelSize  -- Set the text size manually here
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Parent = billboard
+end
+
+-- Function to remove label
+local function removeLabel(obj)
+    local label = obj:FindFirstChild("ESPLabel")
+    if label then
+        label:Destroy()
+    end
+end
+
+-- Toggle ESP on/off
+local function GefsEsp(state)
+    ESPEnabled = state
+    for _, obj in pairs(targetFolder:GetChildren()) do
+        if ESPEnabled then
+            addLabel(obj)
+        else
+            removeLabel(obj)
+        end
+    end
+end
+
+-- Auto label new objects only if ESP is on
+targetFolder.ChildAdded:Connect(function(newObj)
+    if ESPEnabled then
+        addLabel(newObj)
+    end
+end)
+
+
+
 local function EnableGefAttack()
 -- Script inside ServerScriptService
 
@@ -12,7 +344,7 @@ end
 -- Disable touch triggers on all parts at start
 disableTouchInterest()
 
--- Disable touch triggers on any new parts added later
+
 workspace.DescendantAdded:Connect(function(descendant)
     if descendant:IsA("BasePart") then
         descendant.CanTouch = true
@@ -22,7 +354,7 @@ end)
 end
 
 local function NoneGefAttack()
--- Script inside ServerScriptService
+
 
 local function disableTouchInterest()
     for _, part in ipairs(workspace:GetDescendants()) do
@@ -608,38 +940,24 @@ end
    end,
 })
 local Section = Tab2:CreateSection("Kill Aura")
-local Button = Tab2:CreateButton({
+local Toggle = Tab2:CreateToggle({
    Name = "Auto Kill All Gefs",
-   Callback = function()
-local toggle = true         -- Set to true to enable
-local waitTime = 5          -- Customize how long to wait for each GEF to spawn (in seconds)
-
-local gefsFolder = workspace:WaitForChild("GEFs")
-
--- Function to kill a GEF after waiting
-local function killGEF(gef)
-	if not toggle then return end
-	task.delay(waitTime, function()
-		local health = gef:FindFirstChild("Health")
-		if health and health:IsA("NumberValue") then
-			health.Value = -math.huge
+   CurrentValue = false,
+   Flag = "KillAllGefs", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(state)
+KillAllGefsToggle = state
+	while KillAllGefsToggle do
+		for _, gef in pairs(workspace.GEFs:GetChildren()) do
+		    if gef.Name == "Mini GEF" then
+		        local health = gef:FindFirstChild("Health")
+		        if health and health:IsA("NumberValue") then
+		            health.Value = math.huge
+		            health.Value = -math.huge
+		        end
+		    end
 		end
-	end)
+	task.wait(3)
 end
-
--- Run on existing GEFs
-if toggle then
-	for _, gef in pairs(gefsFolder:GetChildren()) do
-		killGEF(gef)
-	end
-end
-
--- Detect new GEFs and kill them after custom wait
-gefsFolder.ChildAdded:Connect(function(gef)
-	if toggle then
-		killGEF(gef)
-	end
-end)
    end,
 })
 local Section = Tab2:CreateSection("Others")
@@ -1636,8 +1954,46 @@ end
    end,
 })
 local Section = Tab6:CreateSection("Esp")
-
-
+local Toggle = Tab6:CreateToggle({
+   Name = "Esp All Players",
+   CurrentValue = false,
+   Flag = "EspPlayers", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+enableESP()
+else
+disableESP()
+end
+   end,
+})
+local Toggle = Tab6:CreateToggle({
+   Name = "Esp All Gefs",
+   CurrentValue = false,
+   Flag = "EspGefs", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+GefsEsp(Value)
+   end,
+})
+local Toggle = Tab6:CreateToggle({
+   Name = "Esp All Items",
+   CurrentValue = false,
+   Flag = "EspItems", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+ItemEsp(Value)
+   end,
+})
+local Toggle = Tab6:CreateToggle({
+   Name = "Esp Truck",
+   CurrentValue = false,
+   Flag = "EspTruck", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+if Value == true then
+addNameTag(truck)
+else
+removeNameTag(truck)
+end
+   end,
+})
 local Section = Tab6:CreateSection("Camera")
 local Toggle = Tab6:CreateToggle({
    Name = "Game Shiftlock",
@@ -1663,7 +2019,6 @@ end
 
 
 local Tab7 = Window:CreateTab("Credits", 4483362458) -- Title, Image
-local Label = Tab7:CreateLabel("Credits to Megaphonk266", 4483362458, Color3.fromRGB(220, 130, 60), false) -- Title, Icon, Color, IgnoreTheme
+local Label = Tab7:CreateLabel("Credits to Megaphonk266", 4483362458, Color3.fromRGB(220, 130, 60), true) -- Title, Icon, Color, IgnoreTheme
 local Paragraph = Tab7:CreateParagraph({Title = "Thanks For Using My Script", Content = "I Really Appreciate !"})
-
 
