@@ -1,0 +1,371 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+--// SETTINGS
+local attractionStrength = 50
+local maxDistance = 100
+local ringPartsEnabled = false
+local targetPlayer = nil
+
+--// UI SETUP
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local CustomTpua = Instance.new("ScreenGui")
+CustomTpua.Name = "CustomTPUA"
+CustomTpua.ResetOnSpawn = false
+CustomTpua.Parent = playerGui
+
+-- First Tab
+local TpuaMainFrame = Instance.new("Frame", CustomTpua)
+TpuaMainFrame.Size = UDim2.new(0, 250, 0, 150)
+TpuaMainFrame.Position = UDim2.new(0, 20, 0, 100)
+TpuaMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+
+local title = Instance.new("TextLabel", TpuaMainFrame)
+title.Text = "Ultimate TP Unanchored"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+
+local toggleButton = Instance.new("TextButton", TpuaMainFrame)
+toggleButton.Text = "Toggle TP Objects"
+toggleButton.Size = UDim2.new(1, -20, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 40)
+toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.SourceSans
+toggleButton.TextSize = 18
+
+local targetBox = Instance.new("TextBox", TpuaMainFrame)
+targetBox.Text = "Made By Gab tv"
+targetBox.PlaceholderText = "Enter Target Username"
+targetBox.Size = UDim2.new(1, -20, 0, 30)
+targetBox.Position = UDim2.new(0, 10, 0, 80)
+targetBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+targetBox.TextColor3 = Color3.new(1, 1, 1)
+targetBox.Font = Enum.Font.SourceSans
+targetBox.TextSize = 16
+
+local notifyLabel = Instance.new("TextLabel", TpuaMainFrame)
+notifyLabel.Size = UDim2.new(1, -20, 0, 20)
+notifyLabel.Position = UDim2.new(0, 10, 0, 120)
+notifyLabel.BackgroundTransparency = 1
+notifyLabel.TextColor3 = Color3.fromRGB(200, 200, 0)
+notifyLabel.Font = Enum.Font.SourceSansItalic
+notifyLabel.TextSize = 14
+notifyLabel.Text = ""
+
+-- Second Tab
+local ExpMainFrame = Instance.new("Frame", CustomTpua)
+ExpMainFrame.Size = UDim2.new(0, 250, 0, 150)
+ExpMainFrame.Position = UDim2.new(0, 20, 0, 100)
+ExpMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ExpMainFrame.Visible = false
+
+local ExpTitle = Instance.new("TextLabel", ExpMainFrame)
+ExpTitle.Text = "Ultimate TP Unanchored"
+ExpTitle.Size = UDim2.new(1, 0, 0, 30)
+ExpTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ExpTitle.TextColor3 = Color3.new(1, 1, 1)
+ExpTitle.Font = Enum.Font.SourceSansBold
+ExpTitle.TextSize = 20
+
+-- Slider function
+local UserInputService = game:GetService("UserInputService")
+
+local function createSlider(parent, labelText, positionY, minVal, maxVal, defaultVal, callback)
+	local label = Instance.new("TextLabel", parent)
+	label.Text = labelText
+	label.Size = UDim2.new(1, -20, 0, 20)
+	label.Position = UDim2.new(0, 10, 0, positionY)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 16
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local sliderFrame = Instance.new("Frame", parent)
+	sliderFrame.Size = UDim2.new(1, -20, 0, 10)
+	sliderFrame.Position = UDim2.new(0, 10, 0, positionY + 25)
+	sliderFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+
+	local knob = Instance.new("Frame", sliderFrame)
+	knob.Size = UDim2.new(0, 10, 1, 0)
+	knob.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 0, 0)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+
+	local valueLabel = Instance.new("TextLabel", parent)
+	valueLabel.Text = tostring(defaultVal)
+	valueLabel.Size = UDim2.new(0, 50, 0, 20)
+	valueLabel.Position = UDim2.new(1, -60, 0, positionY)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.TextColor3 = Color3.new(1, 1, 1)
+	valueLabel.Font = Enum.Font.SourceSans
+	valueLabel.TextSize = 16
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	local dragging = false
+
+	local function updateSlider(inputPosition)
+		local rel = math.clamp((inputPosition.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+		knob.Position = UDim2.new(rel, 0, 0, 0)
+		local value = math.floor(minVal + (maxVal - minVal) * rel)
+		valueLabel.Text = tostring(value)
+		callback(value)
+	end
+
+	local function inputChanged(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateSlider(input.Position)
+		end
+	end
+
+	local function inputEnded(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end
+
+	knob.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			updateSlider(input.Position)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(inputChanged)
+	UserInputService.InputEnded:Connect(inputEnded)
+end
+
+-- Example sliders
+createSlider(ExpMainFrame, "Max Distance", 40, 10, 5000, maxDistance, function(v)
+	maxDistance = v
+end)
+
+createSlider(ExpMainFrame, "Attraction Strength", 100, 1, 10000, attractionStrength, function(v)
+	attractionStrength = v
+end)
+
+-- Toggle TP
+toggleButton.MouseButton1Click:Connect(function()
+    ringPartsEnabled = not ringPartsEnabled
+    notifyLabel.Text = ringPartsEnabled and "TP attraction enabled!" or "TP attraction disabled."
+end)
+
+local function RetainPart(part)
+	if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
+		if part:IsDescendantOf(LocalPlayer.Character) then return false end
+		part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+		part.CanCollide = false
+		return true
+	end
+	return false
+end
+
+local parts = {}
+
+local function addPart(part)
+	if RetainPart(part) and not table.find(parts, part) then
+		table.insert(parts, part)
+	end
+end
+
+local function removePart(part)
+	local index = table.find(parts, part)
+	if index then
+		table.remove(parts, index)
+	end
+end
+
+-- Populate initial parts
+for _, part in ipairs(Workspace:GetDescendants()) do
+	addPart(part)
+end
+
+-- Track added/removed parts
+Workspace.DescendantAdded:Connect(addPart)
+Workspace.DescendantRemoving:Connect(removePart)
+
+-- Ring-style velocity attraction
+RunService.Heartbeat:Connect(function()
+	if not ringPartsEnabled then return end
+
+	local character = targetPlayer.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	local center = rootPart.Position
+
+	for _, part in ipairs(parts) do
+		if part and part.Parent and not part.Anchored then
+			local pos = part.Position
+			local direction = center - pos
+			local distance = direction.Magnitude
+
+			if distance <= maxDistance and distance > 0.1 then
+				part.Velocity = direction.Unit * attractionStrength
+			else
+				part.Velocity = Vector3.zero
+			end
+		end
+	end
+end)
+
+-- Target input
+targetBox.FocusLost:Connect(function()
+	local name = targetBox.Text
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.Name:lower() == name:lower() then
+			targetPlayer = p
+			notifyLabel.Text = "Now targeting: " .. p.Name
+			return
+		end
+	end
+	notifyLabel.Text = "Player not found!"
+end)
+
+-- TP Logic
+local excludedNames = {
+	["Torso"] = true,
+	["Head"] = true,
+	["Right Arm"] = true,
+	["Left Arm"] = true,
+	["Right Leg"] = true,
+	["Left Leg"] = true,
+	["HumanoidRootPart"] = true
+}
+
+local function pullPartsToPlayer()
+	local character = targetPlayer and targetPlayer.Character
+	if not character or not character:FindFirstChild("Head") or character == LocalPlayer.Character then return end
+
+	local headPosition = character.Head.Position
+
+	for _, part in pairs(Workspace:GetDescendants()) do
+		if part:IsA("BasePart") 
+			and not part.Anchored 
+			and not part:IsDescendantOf(character) 
+			and not part:IsDescendantOf(LocalPlayer.Character)
+			and not excludedNames[part.Name] then
+
+			local distance = (part.Position - headPosition).Magnitude
+			if distance <= maxDistance then
+				for _, child in pairs(part:GetChildren()) do
+					if child:IsA("BodyPosition") or child:IsA("BodyGyro") then
+						child:Destroy()
+					end
+				end
+
+				local forceInstance = Instance.new("BodyPosition")
+				forceInstance.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				forceInstance.Position = headPosition
+				forceInstance.P = 1250
+				forceInstance.D = 100
+				forceInstance.Parent = part
+
+				if not table.find(frozenParts, part) then
+					table.insert(frozenParts, part)
+				end
+			end
+		end
+	end
+end
+
+RunService.Heartbeat:Connect(function()
+	if ringPartsEnabled then
+		pullPartsToPlayer()
+	end
+end)
+
+-- Draggable Button
+local SwitchTab = Instance.new("ScreenGui", playerGui)
+SwitchTab.Name = "MobileDraggableButtonUI"
+SwitchTab.ResetOnSpawn = false
+
+local button = Instance.new("TextButton", SwitchTab)
+button.Size = UDim2.new(0, 32, 0, 32)
+button.Position = UDim2.new(0.5, -50, 0.5, -50)
+button.AnchorPoint = Vector2.new(0.5, 0.5)
+button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+button.Text = "¤"
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = button
+
+-- Drag support
+local dragging = false
+local dragStart, startPos, dragInput
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+button.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Toggle GUI open/close
+local OpenMenu = false
+button.MouseButton1Click:Connect(function()
+    OpenMenu = not OpenMenu
+    TpuaMainFrame.Visible = OpenMenu
+    ExpMainFrame.Visible = false
+end)
+
+-- Tab Buttons
+local switchTabButton = Instance.new("TextButton", TpuaMainFrame)
+switchTabButton.Text = "→"
+switchTabButton.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton.Position = UDim2.new(1, -35, 0, 0)
+switchTabButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton.Font = Enum.Font.SourceSans
+switchTabButton.TextSize = 16
+
+switchTabButton.MouseButton1Click:Connect(function()
+    TpuaMainFrame.Visible = false
+    ExpMainFrame.Visible = true
+end)
+
+local switchTabButton2 = Instance.new("TextButton", ExpMainFrame)
+switchTabButton2.Text = "←"
+switchTabButton2.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton2.Position = UDim2.new(1, -35, 0, 0)
+switchTabButton2.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton2.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton2.Font = Enum.Font.SourceSans
+switchTabButton2.TextSize = 16
+
+switchTabButton2.MouseButton1Click:Connect(function()
+    ExpMainFrame.Visible = false
+    TpuaMainFrame.Visible = true
+end)
