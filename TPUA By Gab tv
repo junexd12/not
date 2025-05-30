@@ -67,133 +67,6 @@ SpactateButton.TextColor3 = Color3.new(1, 1, 1)
 SpactateButton.Font = Enum.Font.SourceSans
 SpactateButton.TextSize = 18
 
--- Third Tab
-local SpectatesMainFrame = Instance.new("Frame", CustomTpua)
-SpectatesMainFrame.Size = UDim2.new(0, 250, 0, 150)
-SpectatesMainFrame.Position = UDim2.new(0, 20, 0, 100)
-SpectatesMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-SpectatesMainFrame.Visible = false
-
--- Title label
-local SpectateTitle = Instance.new("TextLabel", SpectatesMainFrame)
-SpectateTitle.Text = "Ultimate TP Unanchored"
-SpectateTitle.Size = UDim2.new(1, 0, 0, 30)
-SpectateTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-SpectateTitle.TextColor3 = Color3.new(1, 1, 1)
-SpectateTitle.Font = Enum.Font.SourceSansBold
-SpectateTitle.TextSize = 20
-
--- Toggle button
-local toggleButton2 = Instance.new("TextButton", SpectatesMainFrame)
-toggleButton2.Text = "Toggle ViewPlayer"
-toggleButton2.Size = UDim2.new(1, -20, 0, 30)
-toggleButton2.Position = UDim2.new(0, 10, 0, 40)
-toggleButton2.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-toggleButton2.TextColor3 = Color3.new(1, 1, 1)
-toggleButton2.Font = Enum.Font.SourceSans
-toggleButton2.TextSize = 18
-
--- Target input box
-local targetBox2 = Instance.new("TextBox", SpectatesMainFrame)
-targetBox2.Text = "Made By Gab tv"
-targetBox2.PlaceholderText = "Enter Target Username"
-targetBox2.Size = UDim2.new(1, -20, 0, 30)
-targetBox2.Position = UDim2.new(0, 10, 0, 80)
-targetBox2.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-targetBox2.TextColor3 = Color3.new(1, 1, 1)
-targetBox2.Font = Enum.Font.SourceSans
-targetBox2.TextSize = 16
-
--- Notification label
-local notifyLabel2 = Instance.new("TextLabel", SpectatesMainFrame)
-notifyLabel2.Size = UDim2.new(1, -20, 0, 30)
-notifyLabel2.Position = UDim2.new(0, 10, 0, 120)
-notifyLabel2.BackgroundTransparency = 1
-notifyLabel2.TextColor3 = Color3.new(1, 1, 0)
-notifyLabel2.Font = Enum.Font.SourceSans
-notifyLabel2.TextSize = 16
-notifyLabel2.Text = "Ready."
-
--- View player logic
-local function viewPlayer(player)
-	if player then
-		notifyLabel2.Text = "Attempting to spectate " .. player.Name
-		local character = player.Character
-		if character then
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				camera.CameraSubject = humanoid
-				camera.CameraType = Enum.CameraType.Custom
-				notifyLabel2.Text = "Now viewing " .. player.Name
-			else
-				notifyLabel2.Text = "Player " .. player.Name .. " has no humanoid!"
-			end
-		else
-			player.CharacterAdded:Once(function(char)
-				local humanoid = char:WaitForChild("Humanoid", 5)
-				if humanoid then
-					camera.CameraSubject = humanoid
-					camera.CameraType = Enum.CameraType.Custom
-					notifyLabel2.Text = "Now viewing " .. player.Name
-				else
-					notifyLabel2.Text = "Player " .. player.Name .. " has no humanoid!"
-				end
-			end)
-			notifyLabel2.Text = "Waiting for " .. player.Name .. "'s character to load..."
-		end
-	else
-		notifyLabel2.Text = "No player selected."
-	end
-end
-
--- Stop viewing function
-local function stopViewing()
-	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-		camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-		camera.CameraType = Enum.CameraType.Custom
-		notifyLabel2.Text = "Camera returned to yourself."
-	else
-		notifyLabel2.Text = "Your character not found."
-	end
-end
-
--- Input handler
-targetBox2.FocusLost:Connect(function()
-	local name = targetBox2.Text
-	if #name < 3 then
-		notifyLabel2.Text = "Enter at least 3 letters!"
-		return
-	end
-
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Name:sub(1, #name):lower() == name:lower() then
-			targetPlayer2 = p
-			notifyLabel2.Text = "Now targeting: " .. p.Name
-			return
-		end
-	end
-
-	targetPlayer2 = nil
-	notifyLabel2.Text = "Player not found!"
-end)
-
--- Toggle viewing when button is clicked
-local isViewing = false
-toggleButton2.MouseButton1Click:Connect(function()
-	if not targetPlayer2 then
-		notifyLabel2.Text = "No target selected!"
-		return
-	end
-
-	if isViewing then
-		stopViewing()
-		isViewing = false
-	else
-		viewPlayer(targetPlayer2)
-		isViewing = true
-	end
-end)
-
 local notifyLabel = Instance.new("TextLabel", TpuaMainFrame)
 notifyLabel.Size = UDim2.new(1, -20, 0, 20)
 notifyLabel.Position = UDim2.new(0, 10, 0, 120)
@@ -300,13 +173,6 @@ toggleButton.MouseButton1Click:Connect(function()
     notifyLabel.Text = ringPartsEnabled and "TP attraction enabled!" or "TP attraction disabled."
 end)
 
-
-SpactateButton.MouseButton1Click:Connect(function()
-	OpenThirdTab = not OpenThirdTab
-	SpectatesMainFrame.Visible = OpenThirdTab
-	TpuaMainFrame.Visible = not OpenThirdTab
-end)
-
 local function RetainPart(part)
 	if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
 		if part:IsDescendantOf(LocalPlayer.Character) then return false end
@@ -379,26 +245,33 @@ targetBox.FocusLost:Connect(function()
 		return
 	end
 
+	local found = false
+
 	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Name:sub(1, #name):lower() == name:lower() then
+		local nameMatch = p.Name:sub(1, #name):lower() == name:lower()
+		local displayNameMatch = p.DisplayName:sub(1, #name):lower() == name:lower()
+
+		if nameMatch or displayNameMatch then
 			targetPlayer = p
+			targetPlayer2 = p
 			notifyLabel.Text = "Now targeting: " .. p.Name
+			found = true
 
 			-- Remove old highlight if exists
 			if currentHighlight then
 				currentHighlight:Destroy()
 				currentHighlight = nil
 			end
-			
+
 			-- Destroy old billboard if exists
 			if billboardHighlight then
 				billboardHighlight:Destroy()
 				billboardHighlight = nil
 			end
 
-			-- *** Add this part to also destroy old BillboardGui on previous target's Head ***
-			if targetPlayer and targetPlayer.Character then
-				local head = targetPlayer.Character:FindFirstChild("Head")
+			-- Clean up any existing name tag
+			if p.Character then
+				local head = p.Character:FindFirstChild("Head")
 				if head then
 					local oldBillboard = head:FindFirstChild("NameTag")
 					if oldBillboard then
@@ -407,20 +280,20 @@ targetBox.FocusLost:Connect(function()
 				end
 			end
 
-			-- Wait for character
-			if targetPlayer.Character then
+			-- Create new highlight and name tag
+			if p.Character then
 				-- Highlight
 				local highlight = Instance.new("Highlight")
 				highlight.Name = "TargetHighlight"
 				highlight.FillColor = Color3.fromRGB(255, 215, 0)
 				highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
 				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-				highlight.Adornee = targetPlayer.Character
-				highlight.Parent = targetPlayer.Character
+				highlight.Adornee = p.Character
+				highlight.Parent = p.Character
 				currentHighlight = highlight
-			
-				-- Name Tag (BillboardGui)
-				local head = targetPlayer.Character:FindFirstChild("Head")
+
+				-- BillboardGui (NameTag)
+				local head = p.Character:FindFirstChild("Head")
 				if head and not head:FindFirstChild("NameTag") then
 					local billboard = Instance.new("BillboardGui")
 					billboard.Name = "NameTag"
@@ -429,70 +302,89 @@ targetBox.FocusLost:Connect(function()
 					billboard.AlwaysOnTop = true
 					billboard.Adornee = head
 					billboard.Parent = head
-			
+
 					local textLabel = Instance.new("TextLabel")
 					textLabel.Size = UDim2.new(1, 0, 1, 0)
 					textLabel.BackgroundTransparency = 1
 					textLabel.TextScaled = true
-					textLabel.TextColor3 = Color3.new(1, 1, 0) -- Yellow
+					textLabel.TextColor3 = Color3.new(1, 1, 0)
 					textLabel.Font = Enum.Font.SourceSansBold
-					textLabel.Text = targetPlayer.Name
+					textLabel.Text = p.DisplayName .. " (" .. p.Name .. ")"
 					textLabel.Parent = billboard
 
-					-- Keep track of the billboard for next destruction
 					billboardHighlight = billboard
 				end
 			end
 
-			return
+			break -- Stop looking once matched
 		end
 	end
 
-	notifyLabel.Text = "Player not found!"
+	if not found then
+		targetPlayer2 = nil
+		notifyLabel.Text = "Player not found!"
+	end
 end)
 
-local function viewPlayer(playerName)
-    local targetPlayer = Players:FindFirstChild(playerName)
-    if targetPlayer then
-        notifyLabel.Text = "Attempting to spectate " .. playerName
-        local character = targetPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                camera.CameraSubject = humanoid
-                camera.CameraType = Enum.CameraType.Custom
-                notifyLabel.Text = "Now viewing " .. playerName
-            else
-                notifyLabel.Text = "Player " .. playerName .. " has no humanoid!"
-            end
-        else
-            targetPlayer.CharacterAdded:Connect(function(char)
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    camera.CameraSubject = humanoid
-                    camera.CameraType = Enum.CameraType.Custom
-                    notifyLabel.Text = "Now viewing " .. playerName
-                else
-                    notifyLabel.Text = "Player " .. playerName .. " has no humanoid!"
-                end
-            end)
-            notifyLabel.Text = "Waiting for " .. playerName .. "'s character to load..."
-        end
-    else
-        notifyLabel.Text = "Player " .. playerName .. " not found."
-    end
+-- View target player function
+local function viewPlayer(player)
+	if player then
+		notifyLabel.Text = "Attempting to spectate " .. player.Name
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				camera.CameraSubject = humanoid
+				camera.CameraType = Enum.CameraType.Custom
+				notifyLabel.Text = "Now viewing " .. player.Name
+			else
+				notifyLabel.Text = "Player " .. player.Name .. " has no humanoid!"
+			end
+		else
+			player.CharacterAdded:Once(function(char)
+				local humanoid = char:WaitForChild("Humanoid", 5)
+				if humanoid then
+					camera.CameraSubject = humanoid
+					camera.CameraType = Enum.CameraType.Custom
+					notifyLabel.Text = "Now viewing " .. player.Name
+				else
+					notifyLabel.Text = "Player " .. player.Name .. " has no humanoid!"
+				end
+			end)
+			notifyLabel.Text = "Unable To View " .. player.Name .. "'s or player Left"
+		end
+	else
+		notifyLabel.Text = "No player selected."
+	end
 end
 
-
+-- Stop viewing function
 local function stopViewing()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        camera.CameraType = Enum.CameraType.Custom
-        notifyLabel.Text = "Camera returned to yourself."
-    else
-        notifyLabel.Text = "Your character not found."
-    end
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		camera.CameraType = Enum.CameraType.Custom
+		notifyLabel.Text = "Camera returned to yourself."
+	else
+		notifyLabel.Text = "Your character not found."
+	end
 end
+
+-- Connect button after defining functions
+local isViewing = false
+SpactateButton.MouseButton1Click:Connect(function()
+	if not targetPlayer2 then
+		notifyLabel.Text = "No target selected!"
+		return
+	end
+
+	if isViewing then
+		stopViewing()
+		isViewing = false
+	else
+		viewPlayer(targetPlayer2)
+		isViewing = true
+	end
+end)
 
 
 -- TP Logic
