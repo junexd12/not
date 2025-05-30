@@ -218,21 +218,87 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Target input
+-- Highlight logic
+local currentHighlight = nil
+local billboardHighlight = nil
+
+-- Target input with highlight
 targetBox.FocusLost:Connect(function()
 	local name = targetBox.Text
 	if #name < 3 then
 		notifyLabel.Text = "Enter at least 3 letters!"
 		return
 	end
-	
+
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p.Name:sub(1, #name):lower() == name:lower() then
 			targetPlayer = p
 			notifyLabel.Text = "Now targeting: " .. p.Name
+
+			-- Remove old highlight if exists
+			if currentHighlight then
+				currentHighlight:Destroy()
+				currentHighlight = nil
+			end
+			
+			-- Destroy old billboard if exists
+			if billboardHighlight then
+				billboardHighlight:Destroy()
+				billboardHighlight = nil
+			end
+
+			-- *** Add this part to also destroy old BillboardGui on previous target's Head ***
+			if targetPlayer and targetPlayer.Character then
+				local head = targetPlayer.Character:FindFirstChild("Head")
+				if head then
+					local oldBillboard = head:FindFirstChild("NameTag")
+					if oldBillboard then
+						oldBillboard:Destroy()
+					end
+				end
+			end
+
+			-- Wait for character
+			if targetPlayer.Character then
+				-- Highlight
+				local highlight = Instance.new("Highlight")
+				highlight.Name = "TargetHighlight"
+				highlight.FillColor = Color3.fromRGB(255, 215, 0)
+				highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				highlight.Adornee = targetPlayer.Character
+				highlight.Parent = targetPlayer.Character
+				currentHighlight = highlight
+			
+				-- Name Tag (BillboardGui)
+				local head = targetPlayer.Character:FindFirstChild("Head")
+				if head and not head:FindFirstChild("NameTag") then
+					local billboard = Instance.new("BillboardGui")
+					billboard.Name = "NameTag"
+					billboard.Size = UDim2.new(0, 200, 0, 50)
+					billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+					billboard.AlwaysOnTop = true
+					billboard.Adornee = head
+					billboard.Parent = head
+			
+					local textLabel = Instance.new("TextLabel")
+					textLabel.Size = UDim2.new(1, 0, 1, 0)
+					textLabel.BackgroundTransparency = 1
+					textLabel.TextScaled = true
+					textLabel.TextColor3 = Color3.new(1, 1, 0) -- Yellow
+					textLabel.Font = Enum.Font.SourceSansBold
+					textLabel.Text = targetPlayer.Name
+					textLabel.Parent = billboard
+
+					-- Keep track of the billboard for next destruction
+					billboardHighlight = billboard
+				end
+			end
+
 			return
 		end
 	end
-	
+
 	notifyLabel.Text = "Player not found!"
 end)
 
