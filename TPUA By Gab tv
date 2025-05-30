@@ -91,12 +91,12 @@ local function createSlider(parent, labelText, positionY, minVal, maxVal, defaul
 	label.TextXAlignment = Enum.TextXAlignment.Left
 
 	local sliderFrame = Instance.new("Frame", parent)
-	sliderFrame.Size = UDim2.new(1, -20, 0, 10)
+	sliderFrame.Size = UDim2.new(1, -20, 0, 15)
 	sliderFrame.Position = UDim2.new(0, 10, 0, positionY + 25)
 	sliderFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 
 	local knob = Instance.new("Frame", sliderFrame)
-	knob.Size = UDim2.new(0, 10, 1, 0)
+	knob.Size = UDim2.new(0, 10, 1, 1)
 	knob.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 0, 0)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 
@@ -220,13 +220,19 @@ end)
 -- Target input
 targetBox.FocusLost:Connect(function()
 	local name = targetBox.Text
+	if #name < 3 then
+		notifyLabel.Text = "Enter at least 3 letters!"
+		return
+	end
+	
 	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Name:lower() == name:lower() then
+		if p.Name:sub(1, #name):lower() == name:lower() then
 			targetPlayer = p
 			notifyLabel.Text = "Now targeting: " .. p.Name
 			return
 		end
 	end
+	
 	notifyLabel.Text = "Player not found!"
 end)
 
@@ -293,7 +299,7 @@ button.Size = UDim2.new(0, 32, 0, 32)
 button.Position = UDim2.new(0.5, -50, 0.5, -50)
 button.AnchorPoint = Vector2.new(0.5, 0.5)
 button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-button.Text = "¤"
+button.Text = "📖"
 button.TextColor3 = Color3.new(1, 1, 1)
 button.Font = Enum.Font.SourceSansBold
 button.TextSize = 18
@@ -345,7 +351,7 @@ end)
 local switchTabButton = Instance.new("TextButton", TpuaMainFrame)
 switchTabButton.Text = "→"
 switchTabButton.Size = UDim2.new(0, 30, 0, 30)
-switchTabButton.Position = UDim2.new(1, -35, 0, 0)
+switchTabButton.Position = UDim2.new(1, -30, 0, 0)
 switchTabButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 switchTabButton.TextColor3 = Color3.new(1, 1, 1)
 switchTabButton.Font = Enum.Font.SourceSans
@@ -359,7 +365,7 @@ end)
 local switchTabButton2 = Instance.new("TextButton", ExpMainFrame)
 switchTabButton2.Text = "←"
 switchTabButton2.Size = UDim2.new(0, 30, 0, 30)
-switchTabButton2.Position = UDim2.new(1, -35, 0, 0)
+switchTabButton2.Position = UDim2.new(1, -30, 0, 0)
 switchTabButton2.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 switchTabButton2.TextColor3 = Color3.new(1, 1, 1)
 switchTabButton2.Font = Enum.Font.SourceSans
