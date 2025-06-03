@@ -1,0 +1,1182 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local function GetPlayer(Name)
+	Name = Name:lower()
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and (p.Name:lower():match("^" .. Name) or p.DisplayName:lower():match("^" .. Name)) then
+			return p
+		end
+	end
+	return nil
+end
+
+--// SETTINGS
+local attractionStrength = 50
+local maxDistance = 100
+local FlingOffsetBelow = 4
+local velocityMultiplier = 10000
+local ringPartsEnabled = false
+local targetPlayer = nil
+local targetPlayer2 = nil
+local viewing = false
+local OpenThirdTab = false
+local MethodEnable = true
+local walkflinging = false
+
+
+
+--// UI SETUP
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local CustomTpua = Instance.new("ScreenGui")
+CustomTpua.Name = "CustomTPUA"
+CustomTpua.ResetOnSpawn = false
+CustomTpua.Parent = playerGui
+
+--//Mod
+local function makeRoundedGuiObject(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = radius
+	corner.Parent = obj
+end
+
+-- Helper function to add hover effect on buttons
+local function addHoverEffect(button)
+	local uigradient = Instance.new("UIGradient")
+	uigradient.Rotation = 90
+	uigradient.Transparency = NumberSequence.new(0.3, 0.7)
+	uigradient.Parent = button
+
+	button.MouseEnter:Connect(function()
+		uigradient.Transparency = NumberSequence.new(0.05, 0.2)
+	end)
+	button.MouseLeave:Connect(function()
+		uigradient.Transparency = NumberSequence.new(0.3, 0.7)
+	end)
+end
+
+local function OutlineBorder(OwnerGui, ColorNew, TransValue)
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2 -- Thickness of the outline
+	stroke.Color = ColorNew
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Transparency = TransValue
+	stroke.Parent = OwnerGui
+end
+
+-- TouchFling Tab
+local TouchFlingMainFrame = Instance.new("Frame", CustomTpua)
+TouchFlingMainFrame.Size = UDim2.new(0, 250, 0, 150)
+TouchFlingMainFrame.Position = UDim2.new(0, 20, 0, 100)
+TouchFlingMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TouchFlingMainFrame.Visible = false
+makeRoundedGuiObject(TouchFlingMainFrame, UDim.new(0, 12))
+OutlineBorder(TouchFlingMainFrame, Color3.fromRGB(0, 0, 0), 0.3)
+
+local TouchFlingTitle = Instance.new("TextLabel", TouchFlingMainFrame)
+TouchFlingTitle.Text = "Ultimate Fling Script"
+TouchFlingTitle.Size = UDim2.new(1, 0, 0, 30)
+TouchFlingTitle.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+TouchFlingTitle.TextColor3 = Color3.new(1, 1, 1)
+TouchFlingTitle.Font = Enum.Font.SourceSansBold
+TouchFlingTitle.TextSize = 20
+makeRoundedGuiObject(TouchFlingTitle, UDim.new(0, 10))
+TouchFlingTitle.TextStrokeTransparency = 0.7
+TouchFlingTitle.TextXAlignment = Enum.TextXAlignment.Center
+
+local toggleButton3 = Instance.new("TextButton", TouchFlingMainFrame)
+toggleButton3.Text = "Touch Fling"
+toggleButton3.Size = UDim2.new(1, -20, 0, 30)
+toggleButton3.Position = UDim2.new(0, 10, 0, 40)
+toggleButton3.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleButton3.TextColor3 = Color3.new(1, 1, 1)
+toggleButton3.Font = Enum.Font.SourceSans
+toggleButton3.TextSize = 18
+makeRoundedGuiObject(toggleButton3, UDim.new(0, 8))
+addHoverEffect(toggleButton3)
+
+local SwitchButton2 = Instance.new("TextButton", TouchFlingMainFrame)
+SwitchButton2.Text = ""
+SwitchButton2.Size = UDim2.new(1, -220, 0, 30)
+SwitchButton2.Position = UDim2.new(1, -40, 0, 40)
+SwitchButton2.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+SwitchButton2.TextColor3 = Color3.new(1, 1, 1)
+SwitchButton2Font = Enum.Font.SourceSans
+SwitchButton2.TextSize = 20
+makeRoundedGuiObject(SwitchButton2, UDim.new(0, 8))
+addHoverEffect(SwitchButton2)
+
+local toggleButton4 = Instance.new("TextButton", TouchFlingMainFrame)
+toggleButton4.Text = "InvisFling"
+toggleButton4.Size = UDim2.new(1, -20, 0, 30)
+toggleButton4.Position = UDim2.new(0, 10, 0, 80)
+toggleButton4.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleButton4.TextColor3 = Color3.new(1, 1, 1)
+toggleButton4.Font = Enum.Font.SourceSans
+toggleButton4.TextSize = 18
+makeRoundedGuiObject(toggleButton4, UDim.new(0, 8))
+addHoverEffect(toggleButton4)
+
+local SwitchButton3 = Instance.new("TextButton", TouchFlingMainFrame)
+SwitchButton3.Text = ""
+SwitchButton3.Size = UDim2.new(1, -220, 0, 30)
+SwitchButton3.Position = UDim2.new(1, -40, 0, 80)
+SwitchButton3.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+SwitchButton3.TextColor3 = Color3.new(1, 1, 1)
+SwitchButton3Font = Enum.Font.SourceSans
+SwitchButton3.TextSize = 20
+makeRoundedGuiObject(SwitchButton3, UDim.new(0, 8))
+addHoverEffect(SwitchButton3)
+
+
+local notifyLabel3 = Instance.new("TextLabel", TouchFlingMainFrame)
+notifyLabel3.Size = UDim2.new(1, -20, 0, 20)
+notifyLabel3.Position = UDim2.new(0, 10, 0, 120)
+notifyLabel3.BackgroundTransparency = 1
+notifyLabel3.TextColor3 = Color3.fromRGB(200, 200, 0)
+notifyLabel3.Font = Enum.Font.SourceSansItalic
+notifyLabel3.TextSize = 16
+notifyLabel3.Text = "Touch Method"
+notifyLabel3.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Fling Tab
+local FlingMainFrame = Instance.new("Frame", CustomTpua)
+FlingMainFrame.Size = UDim2.new(0, 250, 0, 150)
+FlingMainFrame.Position = UDim2.new(0, 20, 0, 100)
+FlingMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+FlingMainFrame.Visible = false
+makeRoundedGuiObject(FlingMainFrame, UDim.new(0, 12))
+OutlineBorder(FlingMainFrame, Color3.fromRGB(0, 0, 0), 0.3)
+
+local FlingTitle = Instance.new("TextLabel", FlingMainFrame)
+FlingTitle.Text = "Ultimate Fling Script"
+FlingTitle.Size = UDim2.new(1, 0, 0, 30)
+FlingTitle.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+FlingTitle.TextColor3 = Color3.new(1, 1, 1)
+FlingTitle.Font = Enum.Font.SourceSansBold
+FlingTitle.TextSize = 20
+makeRoundedGuiObject(FlingTitle, UDim.new(0, 10))
+FlingTitle.TextStrokeTransparency = 0.7
+FlingTitle.TextXAlignment = Enum.TextXAlignment.Center
+
+local toggleButton2 = Instance.new("TextButton", FlingMainFrame)
+toggleButton2.Text = "Fling Player"
+toggleButton2.Size = UDim2.new(1, -20, 0, 30)
+toggleButton2.Position = UDim2.new(0, 10, 0, 40)
+toggleButton2.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleButton2.TextColor3 = Color3.new(1, 1, 1)
+toggleButton2.Font = Enum.Font.SourceSans
+toggleButton2.TextSize = 20
+makeRoundedGuiObject(toggleButton2, UDim.new(0, 8))
+addHoverEffect(toggleButton2)
+
+local targetBox2 = Instance.new("TextBox", FlingMainFrame)
+targetBox2.Text = "Made By Gab tv"
+targetBox2.PlaceholderText = "Enter Target Username"
+targetBox2.Size = UDim2.new(1, -20, 0, 30)
+targetBox2.Position = UDim2.new(0, 10, 0, 80)
+targetBox2.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+targetBox2.TextColor3 = Color3.new(1, 1, 1)
+targetBox2.Font = Enum.Font.SourceSans
+targetBox2.TextSize = 16
+makeRoundedGuiObject(targetBox2, UDim.new(0, 8))
+
+local notifyLabel2 = Instance.new("TextLabel", FlingMainFrame)
+notifyLabel2.Size = UDim2.new(1, -20, 0, 20)
+notifyLabel2.Position = UDim2.new(0, 10, 0, 120)
+notifyLabel2.BackgroundTransparency = 1
+notifyLabel2.TextColor3 = Color3.fromRGB(200, 200, 0)
+notifyLabel2.Font = Enum.Font.SourceSansItalic
+notifyLabel2.TextSize = 14
+notifyLabel2.Text = "Character Method"
+notifyLabel2.TextXAlignment = Enum.TextXAlignment.Center
+
+-- First Tab
+local TpuaMainFrame = Instance.new("Frame", CustomTpua)
+TpuaMainFrame.Size = UDim2.new(0, 250, 0, 150)
+TpuaMainFrame.Position = UDim2.new(0, 20, 0, 100)
+TpuaMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+makeRoundedGuiObject(TpuaMainFrame, UDim.new(0, 12))
+OutlineBorder(TpuaMainFrame, Color3.fromRGB(0, 0, 0), 0.3)
+
+local title = Instance.new("TextLabel", TpuaMainFrame)
+title.Text = "Ultimate Fling Script"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+makeRoundedGuiObject(title, UDim.new(0, 10))
+title.TextStrokeTransparency = 0.7
+title.TextXAlignment = Enum.TextXAlignment.Center
+
+local toggleButton = Instance.new("TextButton", TpuaMainFrame)
+toggleButton.Text = "Teleport Object"
+toggleButton.Size = UDim2.new(1, -20, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 40)
+toggleButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.SourceSans
+toggleButton.TextSize = 18
+makeRoundedGuiObject(toggleButton, UDim.new(0, 8))
+addHoverEffect(toggleButton)
+
+local SwitchButton = Instance.new("TextButton", TpuaMainFrame)
+SwitchButton.Text = ""
+SwitchButton.Size = UDim2.new(1, -220, 0, 30)
+SwitchButton.Position = UDim2.new(1, -40, 0, 40)
+SwitchButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+SwitchButton.TextColor3 = Color3.new(1, 1, 1)
+SwitchButtonFont = Enum.Font.SourceSans
+SwitchButton.TextSize = 20
+makeRoundedGuiObject(SwitchButton, UDim.new(0, 8))
+addHoverEffect(SwitchButton)
+
+
+local targetBox = Instance.new("TextBox", TpuaMainFrame)
+targetBox.Text = "Made By Gab tv"
+targetBox.PlaceholderText = "Enter Target Username"
+targetBox.Size = UDim2.new(1, -20, 0, 30)
+targetBox.Position = UDim2.new(0, 10, 0, 80)
+targetBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+targetBox.TextColor3 = Color3.new(1, 1, 1)
+targetBox.Font = Enum.Font.SourceSans
+targetBox.TextSize = 16
+makeRoundedGuiObject(targetBox, UDim.new(0, 8))
+
+local SpactateButton = Instance.new("TextButton", TpuaMainFrame)
+SpactateButton.Text = "👁"
+SpactateButton.Size = UDim2.new(1, -220, 0, 30)
+SpactateButton.Position = UDim2.new(0, 10, 0, 80)
+SpactateButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpactateButton.TextColor3 = Color3.new(1, 1, 1)
+SpactateButton.Font = Enum.Font.SourceSans
+SpactateButton.TextSize = 20
+makeRoundedGuiObject(SpactateButton, UDim.new(0, 8))
+addHoverEffect(SpactateButton)
+
+local notifyLabel = Instance.new("TextLabel", TpuaMainFrame)
+notifyLabel.Size = UDim2.new(1, -20, 0, 20)
+notifyLabel.Position = UDim2.new(0, 10, 0, 120)
+notifyLabel.BackgroundTransparency = 1
+notifyLabel.TextColor3 = Color3.fromRGB(200, 200, 0)
+notifyLabel.Font = Enum.Font.SourceSansItalic
+notifyLabel.TextSize = 14
+notifyLabel.Text = "Object Method"
+notifyLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Second Tab
+local ExpMainFrame = Instance.new("Frame", CustomTpua)
+ExpMainFrame.Size = UDim2.new(0, 250, 0, 150)
+ExpMainFrame.Position = UDim2.new(0, 20, 0, 100)
+ExpMainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ExpMainFrame.Visible = false
+makeRoundedGuiObject(ExpMainFrame, UDim.new(0, 12))
+OutlineBorder(ExpMainFrame, Color3.fromRGB(0, 0, 0), 0.3)
+
+local ExpTitle = Instance.new("TextLabel", ExpMainFrame)
+ExpTitle.Text = "Ultimate Fling Script"
+ExpTitle.Size = UDim2.new(1, 0, 0, 30)
+ExpTitle.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+ExpTitle.TextColor3 = Color3.new(1, 1, 1)
+ExpTitle.Font = Enum.Font.SourceSansBold
+ExpTitle.TextSize = 20
+makeRoundedGuiObject(ExpTitle, UDim.new(0, 10))
+ExpTitle.TextStrokeTransparency = 0.7
+ExpTitle.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Slider function
+local UserInputService = game:GetService("UserInputService")
+
+local function createSlider(parent, labelText, positionY, minVal, maxVal, defaultVal, callback)
+	local label = Instance.new("TextLabel", parent)
+	label.Text = labelText
+	label.Size = UDim2.new(1, -20, 0, 20)
+	label.Position = UDim2.new(0, 10, 0, positionY)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 16
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local sliderFrame = Instance.new("Frame", parent)
+	sliderFrame.Size = UDim2.new(1, -20, 0, 18)
+	sliderFrame.Position = UDim2.new(0, 10, 0, positionY + 25)
+	sliderFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+	makeRoundedGuiObject(sliderFrame, UDim.new(0, 10))
+
+	local knob = Instance.new("Frame", sliderFrame)
+	knob.Size = UDim2.new(0, 10, 1, 1)
+	knob.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 0, 0)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	makeRoundedGuiObject(knob, UDim.new(0, 10))
+
+	local valueLabel = Instance.new("TextLabel", parent)
+	valueLabel.Text = tostring(defaultVal)
+	valueLabel.Size = UDim2.new(0, 50, 0, 20)
+	valueLabel.Position = UDim2.new(1, -60, 0, positionY)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.TextColor3 = Color3.new(1, 1, 1)
+	valueLabel.Font = Enum.Font.SourceSans
+	valueLabel.TextSize = 16
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	local dragging = false
+
+	local function updateSlider(inputPosition)
+		local rel = math.clamp((inputPosition.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+		knob.Position = UDim2.new(rel, 0, 0, 0)
+		local value = math.floor(minVal + (maxVal - minVal) * rel)
+		valueLabel.Text = tostring(value)
+		callback(value)
+	end
+
+	local function inputChanged(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateSlider(input.Position)
+		end
+	end
+
+	local function inputEnded(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end
+
+	knob.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			updateSlider(input.Position)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(inputChanged)
+	UserInputService.InputEnded:Connect(inputEnded)
+end
+
+-- Example sliders
+createSlider(ExpMainFrame, "Max Distance", 40, 10, 5000, maxDistance, function(v)
+	maxDistance = v
+end)
+
+createSlider(ExpMainFrame, "Attraction Strength", 100, 1, 10000, attractionStrength, function(v)
+	attractionStrength = v
+end)
+
+-- Toggle TP
+toggleButton.MouseButton1Click:Connect(function()
+    ringPartsEnabled = not ringPartsEnabled
+    notifyLabel.Text = ringPartsEnabled and "TP attraction enabled!" or "TP attraction disabled."
+    
+    if ringPartsEnabled then
+	    SwitchButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+		    else 
+	    SwitchButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
+end)
+
+local function RetainPart(part)
+	if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
+		if part:IsDescendantOf(LocalPlayer.Character) then return false end
+		part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+		part.CanCollide = false
+		return true
+	end
+	return false
+end
+
+local parts = {}
+
+local function addPart(part)
+	if RetainPart(part) and not table.find(parts, part) then
+		table.insert(parts, part)
+	end
+end
+
+local function removePart(part)
+	local index = table.find(parts, part)
+	if index then
+		table.remove(parts, index)
+	end
+end
+
+-- Populate initial parts
+for _, part in ipairs(Workspace:GetDescendants()) do
+	addPart(part)
+end
+
+-- Track added/removed parts
+Workspace.DescendantAdded:Connect(addPart)
+Workspace.DescendantRemoving:Connect(removePart)
+
+-- Ring-style velocity attraction
+RunService.Heartbeat:Connect(function()
+	if not ringPartsEnabled then return end
+
+	local character = targetPlayer.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	local center = rootPart.Position
+
+	for _, part in ipairs(parts) do
+		if part and part.Parent and not part.Anchored then
+			local pos = part.Position
+			local direction = center - pos
+			local distance = direction.Magnitude
+
+			if distance <= maxDistance and distance > 0.1 then
+				part.Velocity = direction.Unit * attractionStrength
+			else
+				part.Velocity = Vector3.zero
+			end
+		end
+	end
+end)
+
+-- Target input
+-- Highlight logic
+local currentHighlight = nil
+local billboardHighlight = nil
+
+-- Target input with highlight
+targetBox.FocusLost:Connect(function()
+	local name = targetBox.Text
+	if #name < 3 then
+		notifyLabel.Text = "Enter at least 3 letters!"
+		return
+	end
+
+	local found = false
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		local nameMatch = p.Name:sub(1, #name):lower() == name:lower()
+		local displayNameMatch = p.DisplayName:sub(1, #name):lower() == name:lower()
+
+		if nameMatch or displayNameMatch then
+			targetPlayer = p
+			targetPlayer2 = p
+			notifyLabel.Text = "Now targeting: " .. p.Name
+			found = true
+
+			-- Remove old highlight if exists
+			if currentHighlight then
+				currentHighlight:Destroy()
+				currentHighlight = nil
+			end
+
+			-- Destroy old billboard if exists
+			if billboardHighlight then
+				billboardHighlight:Destroy()
+				billboardHighlight = nil
+			end
+
+			-- Clean up any existing name tag
+			if p.Character then
+				local head = p.Character:FindFirstChild("Head")
+				if head then
+					local oldBillboard = head:FindFirstChild("NameTag")
+					if oldBillboard then
+						oldBillboard:Destroy()
+					end
+				end
+			end
+
+			-- Create new highlight and name tag
+			if p.Character then
+				-- Highlight
+				local highlight = Instance.new("Highlight")
+				highlight.Name = "TargetHighlight"
+				highlight.FillColor = Color3.fromRGB(255, 215, 0)
+				highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				highlight.Adornee = p.Character
+				highlight.Parent = p.Character
+				currentHighlight = highlight
+
+				-- BillboardGui (NameTag)
+				local head = p.Character:FindFirstChild("Head")
+				if head and not head:FindFirstChild("NameTag") then
+					local billboard = Instance.new("BillboardGui")
+					billboard.Name = "NameTag"
+					billboard.Size = UDim2.new(0, 200, 0, 50)
+					billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+					billboard.AlwaysOnTop = true
+					billboard.Adornee = head
+					billboard.Parent = head
+
+					local textLabel = Instance.new("TextLabel")
+					textLabel.Size = UDim2.new(1, 0, 1, 0)
+					textLabel.BackgroundTransparency = 1
+					textLabel.TextScaled = true
+					textLabel.TextColor3 = Color3.new(1, 1, 0)
+					textLabel.Font = Enum.Font.SourceSansBold
+					textLabel.Text = p.DisplayName .. " (" .. p.Name .. ")"
+					textLabel.Parent = billboard
+
+					billboardHighlight = billboard
+				end
+			end
+
+			break -- Stop looking once matched
+		end
+	end
+
+	if not found then
+		targetPlayer2 = nil
+		notifyLabel.Text = "Player not found!"
+	end
+end)
+
+-- View target player function
+local function viewPlayer(player)
+	if player then
+		notifyLabel.Text = "Attempting to spectate " .. player.Name
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				camera.CameraSubject = humanoid
+				camera.CameraType = Enum.CameraType.Custom
+				notifyLabel.Text = "Now viewing " .. player.Name
+			else
+				notifyLabel.Text = "Player " .. player.Name .. " has no humanoid!"
+			end
+		else
+			player.CharacterAdded:Once(function(char)
+				local humanoid = char:WaitForChild("Humanoid", 5)
+				if humanoid then
+					camera.CameraSubject = humanoid
+					camera.CameraType = Enum.CameraType.Custom
+					notifyLabel.Text = "Now viewing " .. player.Name
+				else
+					notifyLabel.Text = "Player " .. player.Name .. " has no humanoid!"
+				end
+			end)
+			notifyLabel.Text = "Unable To View " .. player.Name .. "'s or player Left"
+		end
+	else
+		notifyLabel.Text = "No player selected."
+	end
+end
+
+-- Stop viewing function
+local function stopViewing()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		camera.CameraType = Enum.CameraType.Custom
+		notifyLabel.Text = "Camera returned to yourself."
+	else
+		notifyLabel.Text = "Your character not found."
+	end
+end
+
+-- Connect button after defining functions
+local isViewing = false
+SpactateButton.MouseButton1Click:Connect(function()
+	if not targetPlayer2 then
+		notifyLabel.Text = "No target selected!"
+		return
+	end
+
+	if isViewing then
+		stopViewing()
+		isViewing = false
+	else
+		viewPlayer(targetPlayer2)
+		isViewing = true
+	end
+end)
+
+local function SkidFling(TargetPlayer)
+	local Character = LocalPlayer.Character
+	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+	local RootPart = Humanoid and Humanoid.RootPart
+
+	local TCharacter = TargetPlayer.Character
+	local THumanoid = TCharacter and TCharacter:FindFirstChildOfClass("Humanoid")
+	local TRootPart = THumanoid and THumanoid.RootPart
+	local THead = TCharacter and TCharacter:FindFirstChild("Head")
+	local Accessory = TCharacter and TCharacter:FindFirstChildOfClass("Accessory")
+	local Handle = Accessory and Accessory:FindFirstChild("Handle")
+
+	if not Character or not Humanoid or not RootPart then
+		notifyLabel2.Text = "Your character is missing parts"
+		return
+	end
+
+	if THumanoid and THumanoid.Sit then
+		notifyLabel2.Text = "Target is sitting!"
+		return
+	end
+
+	-- Save original position
+	local originalCFrame = RootPart.CFrame
+
+	-- Camera follows target
+	if THead then
+		camera.CameraSubject = THead
+	elseif Handle then
+		camera.CameraSubject = Handle
+	elseif THumanoid then
+		camera.CameraSubject = THumanoid
+	end
+
+	local function FPos(BasePart, Pos, Ang)
+		local under = Vector3.new(0, -FlingOffsetBelow, 0)
+		local newCFrame = CFrame.new(BasePart.Position + under) * Pos * Ang
+		RootPart.CFrame = newCFrame
+		Character:SetPrimaryPartCFrame(newCFrame)
+		RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+		RootPart.RotVelocity = Vector3.new(math.huge, math.huge, math.huge)
+	end
+
+	local function SFBasePart(BasePart)
+		local TimeToWait = 2
+		local Start = tick()
+		local Angle = 0
+
+		repeat
+			if RootPart and THumanoid then
+				Angle += 9e15
+				FPos(BasePart, CFrame.new(0, 1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
+				task.wait()
+				FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(Angle), 0, 0))
+				task.wait()
+			else
+				break
+			end
+		until BasePart.Velocity.Magnitude > 500
+			or BasePart.Parent ~= TargetPlayer.Character
+			or TargetPlayer.Parent ~= Players
+			or THumanoid.Sit
+			or Humanoid.Health <= 0
+			or tick() > Start + TimeToWait
+	end
+
+	-- Disable auto-fall
+	workspace.FallenPartsDestroyHeight = 0/0
+
+	local BV = Instance.new("BodyVelocity")
+	BV.Name = "EpixVel"
+	BV.Parent = RootPart
+	BV.Velocity = Vector3.new(9e8, 9e8, 9e8)
+	BV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+
+	-- Choose best part to fling
+	if TRootPart and THead then
+		if (TRootPart.Position - THead.Position).Magnitude > 5 then
+			SFBasePart(THead)
+		else
+			SFBasePart(TRootPart)
+		end
+	elseif TRootPart then
+		SFBasePart(TRootPart)
+	elseif THead then
+		SFBasePart(THead)
+	elseif Handle then
+		SFBasePart(Handle)
+	else
+		notifyLabel2.Text = "Target missing parts!"
+	end
+
+	-- Cleanup
+	BV:Destroy()
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+
+	-- Teleport back to original position and freeze motion
+	RootPart.Anchored = true
+	RootPart.CFrame = originalCFrame
+	Character:SetPrimaryPartCFrame(originalCFrame)
+
+	for _, part in ipairs(Character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Velocity = Vector3.zero
+			part.RotVelocity = Vector3.zero
+		end
+	end
+
+	Humanoid.PlatformStand = false
+	Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+	task.wait(0.2)
+	RootPart.Anchored = false
+
+	camera.CameraSubject = Humanoid
+	notifyLabel2.Text = "Fling complete."
+end
+
+-- TP Logic
+local excludedNames = {
+	["Torso"] = true,
+	["Head"] = true,
+	["Right Arm"] = true,
+	["Left Arm"] = true,
+	["Right Leg"] = true,
+	["Left Leg"] = true,
+	["HumanoidRootPart"] = true
+}
+
+local function pullPartsToPlayer()
+	local character = targetPlayer and targetPlayer.Character
+	if not character or not character:FindFirstChild("Head") or character == LocalPlayer.Character then return end
+
+	local headPosition = character.Head.Position
+
+	for _, part in pairs(Workspace:GetDescendants()) do
+		if part:IsA("BasePart") 
+			and not part.Anchored 
+			and not part:IsDescendantOf(character) 
+			and not part:IsDescendantOf(LocalPlayer.Character)
+			and not excludedNames[part.Name] then
+
+			local distance = (part.Position - headPosition).Magnitude
+			if distance <= maxDistance then
+				for _, child in pairs(part:GetChildren()) do
+					if child:IsA("BodyPosition") or child:IsA("BodyGyro") then
+						child:Destroy()
+					end
+				end
+
+				local forceInstance = Instance.new("BodyPosition")
+				forceInstance.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				forceInstance.Position = headPosition
+				forceInstance.P = 1250
+				forceInstance.D = 100
+				forceInstance.Parent = part
+
+				if not table.find(frozenParts, part) then
+					table.insert(frozenParts, part)
+				end
+			end
+		end
+	end
+end
+
+RunService.Heartbeat:Connect(function()
+	if ringPartsEnabled then
+		pullPartsToPlayer()
+	end
+end)
+
+local flyConnection = nil
+
+function Fly(enable)
+	local function getCharacter()
+		return LocalPlayer.Character
+	end
+
+	local function getHRP()
+		local character = getCharacter()
+		return character and character:FindFirstChild("HumanoidRootPart")
+	end
+
+	local function getHumanoid()
+		local character = getCharacter()
+		return character and character:FindFirstChildOfClass("Humanoid")
+	end
+
+	local function getControlModule()
+		return require(LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+	end
+
+	if enable then
+		if flyConnection then flyConnection:Disconnect() end
+
+		flyConnection = RunService.RenderStepped:Connect(function()
+			local hrp = getHRP()
+			local humanoid = getHumanoid()
+
+			if hrp and humanoid then
+				local velocity = hrp:FindFirstChild("VelocityHandler")
+				local gyro = hrp:FindFirstChild("GyroHandler")
+
+				if not velocity then
+					velocity = Instance.new("BodyVelocity")
+					velocity.Name = "VelocityHandler"
+					velocity.MaxForce = Vector3.zero
+					velocity.Velocity = Vector3.zero
+					velocity.Parent = hrp
+				end
+
+				if not gyro then
+					gyro = Instance.new("BodyGyro")
+					gyro.Name = "GyroHandler"
+					gyro.MaxTorque = Vector3.zero
+					gyro.P = 1000
+					gyro.D = 50
+					gyro.Parent = hrp
+				end
+
+				velocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+				gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+				humanoid.PlatformStand = true
+
+				local camera = Workspace.CurrentCamera
+				local moveVector = getControlModule():GetMoveVector()
+
+				gyro.CFrame = camera.CFrame
+				velocity.Velocity = Vector3.zero
+
+				if moveVector.X ~= 0 then
+					velocity.Velocity += camera.CFrame.RightVector * (moveVector.X * _G.SetSpeedFly)
+				end
+				if moveVector.Z ~= 0 then
+					velocity.Velocity -= camera.CFrame.LookVector * (moveVector.Z * _G.SetSpeedFly)
+				end
+			end
+		end)
+
+	else
+		-- Disable fly
+		if flyConnection then
+			flyConnection:Disconnect()
+			flyConnection = nil
+		end
+
+		local hrp = getHRP()
+		local humanoid = getHumanoid()
+		if hrp and humanoid then
+			if hrp:FindFirstChild("VelocityHandler") then
+				hrp.VelocityHandler:Destroy()
+			end
+			if hrp:FindFirstChild("GyroHandler") then
+				hrp.GyroHandler:Destroy()
+			end
+			humanoid.PlatformStand = false
+		end
+	end
+end
+
+-- Draggable Button
+local SwitchTab = Instance.new("ScreenGui", playerGui)
+SwitchTab.Name = "MobileDraggableButtonUI"
+SwitchTab.ResetOnSpawn = false
+
+local button = Instance.new("TextButton", SwitchTab)
+button.Size = UDim2.new(0, 32, 0, 32)
+button.Position = UDim2.new(0.5, -50, 0.5, -50)
+button.AnchorPoint = Vector2.new(0.5, 0.5)
+button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+button.Text = "📖"
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+makeRoundedGuiObject(button, UDim.new(0, 12))
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = button
+
+-- Drag support
+local dragging = false
+local dragStart, startPos, dragInput
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+button.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Toggle GUI open/close
+local OpenMenu = false
+button.MouseButton1Click:Connect(function()
+    OpenMenu = not OpenMenu
+    TpuaMainFrame.Visible = OpenMenu
+    MethodEnable = OpenMenu
+    ExpMainFrame.Visible = false
+    FlingMainFrame.Visible = false
+    TouchFlingMainFrame.Visible = false
+end)
+
+
+-- Tab Buttons
+local switchTabButton = Instance.new("TextButton", TpuaMainFrame)
+switchTabButton.Text = "→"
+switchTabButton.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton.Position = UDim2.new(1, -30, 0, 0)
+switchTabButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton.Font = Enum.Font.SourceSans
+switchTabButton.TextSize = 16
+makeRoundedGuiObject(switchTabButton, UDim.new(0, 12))
+
+switchTabButton.MouseButton1Click:Connect(function()
+    TpuaMainFrame.Visible = false
+    ExpMainFrame.Visible = true
+end)
+
+local switchTabButton2 = Instance.new("TextButton", ExpMainFrame)
+switchTabButton2.Text = "←"
+switchTabButton2.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton2.Position = UDim2.new(1, -30, 0, 0)
+switchTabButton2.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton2.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton2.Font = Enum.Font.SourceSans
+switchTabButton2.TextSize = 16
+makeRoundedGuiObject(switchTabButton2, UDim.new(0, 12))
+
+switchTabButton2.MouseButton1Click:Connect(function()
+    ExpMainFrame.Visible = false
+    TpuaMainFrame.Visible = true
+end)
+
+local switchTabButton3 = Instance.new("TextButton", button)
+switchTabButton3.Text = "Method"
+switchTabButton3.Size = UDim2.new(0, 80, 0, 30)
+switchTabButton3.Position = UDim2.new(0, -24, 0, 30)
+switchTabButton3.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton3.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton3.Font = Enum.Font.SourceSans
+switchTabButton3.TextSize = 16
+makeRoundedGuiObject(switchTabButton3, UDim.new(0, 12))
+
+switchTabButton3.MouseButton1Click:Connect(function()
+if MethodEnable then
+    Method = not Method
+    FlingMainFrame.Visible = not Method
+    TpuaMainFrame.Visible = Method
+    ExpMainFrame.Visible = false
+  end
+end)
+
+local switchTabButton4 = Instance.new("TextButton", FlingMainFrame)
+switchTabButton4.Text = "→"
+switchTabButton4.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton4.Position = UDim2.new(1, -30, 0, 0)
+switchTabButton4.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton4.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton4.Font = Enum.Font.SourceSans
+switchTabButton4.TextSize = 16
+makeRoundedGuiObject(switchTabButton4, UDim.new(0, 12))
+
+switchTabButton4.MouseButton1Click:Connect(function()
+    FlingMainFrame.Visible = false
+    TouchFlingMainFrame.Visible = true
+end)
+
+
+local switchTabButton5 = Instance.new("TextButton", TouchFlingMainFrame)
+switchTabButton5.Text = "←"
+switchTabButton5.Size = UDim2.new(0, 30, 0, 30)
+switchTabButton5.Position = UDim2.new(1, -30, 0, 0)
+switchTabButton5.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+switchTabButton5.TextColor3 = Color3.new(1, 1, 1)
+switchTabButton5.Font = Enum.Font.SourceSans
+switchTabButton5.TextSize = 16
+makeRoundedGuiObject(switchTabButton5, UDim.new(0, 12))
+
+switchTabButton5.MouseButton1Click:Connect(function()
+    TouchFlingMainFrame.Visible = false
+    FlingMainFrame.Visible = true
+end)
+
+toggleButton2.MouseButton1Click:Connect(function()
+	local targetName = targetBox2.Text 
+	local foundPlayer = GetPlayer(targetName)
+
+	if foundPlayer then
+		SkidFling(foundPlayer)
+		notifyLabel2.Text = "Killing Target"
+	else
+		notifyLabel2.Text = "Invalid Username"
+	end
+end)
+
+local ToggleFlyFling = false
+toggleButton4.MouseButton1Click:Connect(function()
+ToggleFlyFling = not ToggleFlyFling
+Fly(ToggleFlyFling)
+
+_G.SetSpeedFly = 50
+
+if ToggleFlyFling then
+SwitchButton3.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+
+local speaker = Players.LocalPlayer
+local character = speaker.Character or speaker.CharacterAdded:Wait()
+
+-- Disable death state
+local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+if humanoid then
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+end
+
+-- Create fake character
+local fakeChar = Instance.new("Model")
+fakeChar.Name = "FakeCharacter"
+
+local torso = Instance.new("Part")
+torso.Name = "Torso"
+torso.CanCollide = false
+torso.Anchored = true
+torso.Position = Vector3.new(0, 9999, 0)
+torso.Parent = fakeChar
+
+local head = Instance.new("Part")
+head.Name = "Head"
+head.CanCollide = false
+head.Anchored = true
+head.Position = Vector3.new(0, 9999, 0)
+head.Parent = fakeChar
+
+local fakeHumanoid = Instance.new("Humanoid")
+fakeHumanoid.Name = "Humanoid"
+fakeHumanoid.Parent = fakeChar
+
+-- Replace real character with fake temporarily
+fakeChar.Parent = workspace
+speaker.Character = fakeChar
+
+task.wait(3)
+
+-- Restore real character
+speaker.Character = character
+task.wait(3)
+
+-- Add new Humanoid to original character
+local newHumanoid = Instance.new("Humanoid")
+newHumanoid.Name = "Humanoid"
+newHumanoid.Parent = character
+
+-- Clone head just in case (you weren't parenting it)
+local clonedHead = head:Clone()
+clonedHead.Parent = character
+
+-- Utility function to get root
+local function getRoot(char)
+    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+end
+
+-- Clean character parts except root and Humanoid
+local root = getRoot(character)
+for _, v in pairs(character:GetChildren()) do
+    if v ~= root and v.Name ~= "Humanoid" then
+        v:Destroy()
+    end
+end
+
+-- Make root visible and white
+if root then
+    root.Transparency = 0
+    root.Color = Color3.new(1, 1, 1)
+end
+
+-- Prevent collisions
+local invisFlingStepped
+invisFlingStepped = RunService.Stepped:Connect(function()
+    local r = getRoot(speaker.Character)
+    if r then
+        r.CanCollide = false
+    else
+        invisFlingStepped:Disconnect()
+    end
+end)
+
+-- Start flying
+if typeof(sFLY) == "function" then
+    sFLY()
+end
+
+-- Camera fix
+workspace.CurrentCamera.CameraSubject = root
+
+-- Add BodyThrust
+if root then
+    local thrust = Instance.new("BodyThrust")
+    thrust.Force = Vector3.new(99999, 999990, 99999)
+    thrust.Location = root.Position
+    thrust.Parent = root
+end
+else
+SwitchButton3.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+
+game.Players.LocalPlayer.Character.Humanoid.Health = 0
+	end
+end)
+
+
+local function FlingOn()
+
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local RunService = game:GetService("RunService")
+	local Players = game:GetService("Players")
+
+	local hiddenfling = false
+	local flingThread 
+	if not ReplicatedStorage:FindFirstChild("CustomFling") then
+		local detection = Instance.new("Decal")
+		detection.Name = "CustomFling"
+		detection.Parent = ReplicatedStorage
+	end
+	
+	local function fling()
+		local lp = Players.LocalPlayer
+		local c, hrp, vel, movel = nil, nil, nil, 0.1
+	
+		while hiddenfling do
+			RunService.Heartbeat:Wait()
+			c = lp.Character
+			hrp = c and c:FindFirstChild("HumanoidRootPart")
+	
+			if hrp then
+				vel = hrp.Velocity
+				hrp.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+				RunService.RenderStepped:Wait()
+				hrp.Velocity = vel
+				RunService.Stepped:Wait()
+				hrp.Velocity = vel + Vector3.new(0, movel, 0)
+				movel = -movel
+			end
+		end
+	end
+	
+	toggleButton3.MouseButton1Click:Connect(function()
+		hiddenfling = not hiddenfling
+		
+	if hiddenfling then
+		SwitchButton2.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+		 else
+		SwitchButton2.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	end
+	
+		if hiddenfling then
+			flingThread = coroutine.create(fling)
+			coroutine.resume(flingThread)
+		else
+			hiddenfling = false
+		end
+	end)
+	
+end
+coroutine.wrap(FlingOn())()
