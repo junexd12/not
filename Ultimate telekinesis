@@ -1,0 +1,264 @@
+-- Services
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Globals
+local active = false
+local anchorPart
+local anchorAttachment
+local currentPets = {}
+
+-- Create Toggle Button
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "PetGUI"
+gui.ResetOnSpawn = false
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 150, 0, 40)
+toggleBtn.Position = UDim2.new(0.5, -75, 0.85, 0)
+toggleBtn.Text = "Toggle Pet OFF"
+toggleBtn.TextScaled = true
+toggleBtn.Parent = gui
+
+-- Toggle logic
+toggleBtn.MouseButton1Click:Connect(function()
+	active = not active
+	toggleBtn.Text = active and "Toggle Pet ON" or "Toggle Pet OFF"
+
+	if not active and #currentPets > 0 then
+		for _, pet in ipairs(currentPets) do
+			for _, child in ipairs(pet:GetChildren()) do
+				if child:IsA("AlignPosition") or child:IsA("Attachment") then
+					child:Destroy()
+				end
+			end
+
+			pet.CanCollide = true
+
+			-- Remove from network sync
+			for j = #Network.BaseParts, 1, -1 do
+				if Network.BaseParts[j] == pet then
+					table.remove(Network.BaseParts, j)
+					break
+				end
+			end
+		end
+		currentPets = {}
+	end
+end)
+
+-- Anchor part follows above your head
+local function setupAnchor()
+	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local head = char:WaitForChild("Head")
+
+	if not anchorPart then
+		anchorPart = Instance.new("Part")
+		anchorPart.Name = "PetAnchor"
+		anchorPart.Anchored = true
+		anchorPart.Transparency = 1
+		anchorPart.CanCollide = false
+		anchorPart.Size = Vector3.new(1, 1, 1)
+		anchorPart.Parent = workspace
+
+		anchorAttachment = Instance.new("Attachment", anchorPart)
+	end
+
+	RunService.Heartbeat:Connect(function()
+		if head and anchorPart then
+			anchorPart.Position = head.Position + Vector3.new(0, 9, 0)
+		end
+	end)
+end
+
+-- Respawn logic
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	setupAnchor()
+end)
+setupAnchor()
+
+-- Network replication system
+if not getgenv().Network then
+	getgenv().Network = {
+		BaseParts = {},
+		Velocity = Vector3.new(54.46, 54.46, 54.46)
+	}
+
+	function Network.RetainPart(part)
+		if typeof(part) == "Instance" and part:IsA("BasePart") and part:IsDescendantOf(workspace) then
+			table.insert(Network.BaseParts, part)
+			part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+			part.CanCollide = false
+		end
+	end
+
+	local function EnableReplication()
+		LocalPlayer.ReplicationFocus = workspace
+		RunService.Heartbeat:Connect(function()
+			pcall(function()
+				sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+			end)
+			for _, part in pairs(Network.BaseParts) do
+				if part:IsDescendantOf(workspace) then
+					part.Velocity = Network.Velocity
+				end
+			end
+		end)
+	end
+
+	EnableReplication()
+end
+
+-- Valid part filter
+local function isValidPart(part)
+	if not part or not part:IsA("BasePart") or part.Anchored then return false end
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character and part:IsDescendantOf(player.Character) then
+			return false
+		end
+	end
+	return true
+end
+
+-- Attach part to follow anchor
+local function attachPart(part)
+	if not isValidPart(part) then return end
+
+	for _, child in ipairs(part:GetChildren()) do
+		if child:IsA("AlignPosition") or child:IsA("Attachment") then
+			child:Destroy()
+		end
+	end
+
+	local a0 = Instance.new("Attachment", part)
+	local a1 = anchorAttachment or Instance.new("Attachment", anchorPart)
+
+	local align = Instance.new("AlignPosition")
+	align.Attachment0 = a0
+	align.Attachment1 = a1
+	align.RigidityEnabled = false
+	align.MaxForce = math.huge
+	align.MaxVelocity = math.huge
+	align.Responsiveness = 200
+	align.Parent = part
+
+	part.CanCollide = false
+	part.Velocity = Vector3.zero
+	part.RotVelocity = Vector3.zero
+
+	Network.RetainPart(part)
+	table.insert(currentPets, part)
+end
+
+local spinSpeed = 10000 -- radians per second, super fast spin
+
+local function followPlayerForSeconds(pet, targetPlayer, duration)
+	if not pet or not pet.Parent or not targetPlayer or not targetPlayer.Character then return end
+	
+	local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	
+	-- Cleanup any previous AlignOrientation if exists
+	for _, child in ipairs(pet:GetChildren()) do
+		if child:IsA("AlignOrientation") then
+			child:Destroy()
+		end
+	end
+	
+	-- Create AlignOrientation for spinning
+	local alignOri = Instance.new("AlignOrientation")
+	
+	local attach0 = Instance.new("Attachment", pet)
+	local attach1 = Instance.new("Attachment", pet)
+	
+	alignOri.Attachment0 = attach0
+	alignOri.Attachment1 = attach1
+	alignOri.MaxTorque = math.huge
+	alignOri.Responsiveness = 200
+	alignOri.Parent = pet
+	
+	-- Spin logic
+	local spinConnection
+	local elapsed = 0
+	
+	spinConnection = RunService.Heartbeat:Connect(function(dt)
+		elapsed = elapsed + dt
+		if elapsed >= duration then
+			spinConnection:Disconnect()
+			
+			-- Remove spinning attachments and AlignOrientation
+			if alignOri and alignOri.Parent then alignOri:Destroy() end
+			if attach0 and attach0.Parent then attach0:Destroy() end
+			if attach1 and attach1.Parent then attach1:Destroy() end
+			
+			-- Stop following — restore AlignPosition to anchor
+			attachPart(pet)
+			return
+		end
+		
+		-- Make pet position follow the target player
+		if hrp and pet then
+			-- Move pet to target player's HumanoidRootPart + offset
+			pet.Position = hrp.Position + Vector3.new(0, 5, 0)
+			
+			-- Spin pet by rotating Alignment attachments
+			local angle = elapsed * spinSpeed
+			attach1.Orientation = Vector3.new(0, math.deg(angle), 0)
+		end
+	end)
+end
+
+-- Modify Mouse Button click handler to handle player clicks:
+Mouse.Button1Down:Connect(function()
+	if not active then return end
+	local target = Mouse.Target
+	if not target then return end
+	
+	-- Check if clicked on a player
+	for _, player in pairs(Players:GetPlayers()) do
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			if target == player.Character.HumanoidRootPart or target:IsDescendantOf(player.Character) then
+				-- Follow clicked player for 5 seconds with spin
+				if currentPets[1] then -- Just control the first pet for demo, can be changed
+					followPlayerForSeconds(currentPets[1], player, 5)
+				end
+				return -- stop here if clicked a player
+			end
+		end
+	end
+	
+	-- Otherwise if clicked a valid part, attach it normally
+	if target and isValidPart(target) then
+		attachPart(target)
+	end
+end)
+
+-- Mouse support
+Mouse.Button1Down:Connect(function()
+	if not active then return end
+	local target = Mouse.Target
+	if target and isValidPart(target) then
+		attachPart(target)
+	end
+end)
+
+-- Mobile support
+UIS.TouchTap:Connect(function(positions, processed)
+	if processed or not active then return end
+	local pos = positions[1]
+	if not pos then return end
+
+	local cam = workspace.CurrentCamera
+	local ray = cam:ViewportPointToRay(pos.X, pos.Y)
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 500)
+
+	if result and isValidPart(result.Instance) then
+		attachPart(result.Instance)
+	end
+end)
