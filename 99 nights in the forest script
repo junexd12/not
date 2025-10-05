@@ -1,0 +1,1437 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Roblox_2025RYB",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "INITIATING",
+   LoadingSubtitle = "By Luis Gabriel Torcuator",
+   ShowText = "Script", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "[99 Nights in the forest] Script By Gab tv"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Security",
+      Subtitle = "Key System",
+      Note = "authorized Account Only", -- Use this to tell the user how to get a key
+      FileName = "99nightsintheforestbygabtv", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"FREE_0943ddafe2557d1670e35ddd653f863f"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+-- // Services
+local VirtualInput = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Rep = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+
+
+-- // Player & Character
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local mouse = player:GetMouse()
+
+-- // Game Gui
+local fishingUI = player:WaitForChild("PlayerGui")
+	:WaitForChild("Interface")
+	:WaitForChild("FishingCatchFrame")
+	
+local timingBar = fishingUI:WaitForChild("TimingBar")
+local redLine = timingBar:WaitForChild("Bar")
+local successArea = timingBar:WaitForChild("SuccessArea")
+---------------------------------------------------------------------------------------------
+local fluteFrame = player:WaitForChild("PlayerGui")
+	:WaitForChild("Interface")
+	:WaitForChild("TamingFluteFrame")
+
+local FlutetimingBar = fluteFrame:WaitForChild("TimingBar")
+local Flutebar = FlutetimingBar:WaitForChild("Bar")
+local Flutesuccess = FlutetimingBar:WaitForChild("SuccessArea")
+
+-- // Inventory & Items
+local itemsFolder = workspace:WaitForChild("Items")
+local bag = player:WaitForChild("Inventory"):WaitForChild("Old Sack")
+local itemBag = player:WaitForChild("ItemBag")
+local charactersFolder = workspace:WaitForChild("Characters")
+local boundary = workspace:WaitForChild("Map"):WaitForChild("Boundaries")
+local campfire = workspace:WaitForChild("Map"):WaitForChild("Campground"):WaitForChild("MainFire")
+
+
+-- // Remote Events
+local startDragRemote = Rep:WaitForChild("RemoteEvents"):WaitForChild("RequestStartDraggingItem")
+local storeRemote = Rep:WaitForChild("RemoteEvents"):WaitForChild("RequestBagStoreItem")
+local dropRemote = Rep:WaitForChild("RemoteEvents"):WaitForChild("RequestBagDropItem")
+local stopDragRemote = Rep:WaitForChild("RemoteEvents"):WaitForChild("StopDraggingItem")
+local DamageRemote = Rep:WaitForChild("RemoteEvents"):WaitForChild("ToolDamageObject")
+local PlantSapling = Rep:WaitForChild("RemoteEvents"):WaitForChild("RequestPlantItem")
+local PickUpModel = Rep:WaitForChild("RemoteEvents"):WaitForChild("RequestPickUpStructure")
+
+-- // Variables
+local fake
+local fakeHum
+local weld
+local FakeHotbox = false
+local AutoFluteEnable = true
+local TargetChild = "Lost Child"
+local AutoAll = false
+local TapPickUp = false
+local AutoWall = false
+local PlantAura = false
+local ChopAuraEnabled = false
+local Bringing = false
+local processedItems = {}
+local KillAllNpc = false
+local AutoReel = false
+local chopping = false
+local lastClick = 0
+local cooldown = 0.002
+local TOOL_NAME2 = "Old Axe"
+local MAX_DISTANCE = 50
+local attacking = false
+local TOOL_NAME = "Old Axe"
+local Method = "Normal"
+local target = "Log"
+local batchSize = 5
+local originalPositions = {}
+local autofarm = false
+local currentTrunk
+local followConn
+local autoClick = false
+local clickLoop
+
+-- // Function
+local function NormalBringAll()
+    local processedItems = {}
+    local itemsToProcess = {}
+
+    for _, item in ipairs(workspace.Items:GetChildren()) do
+        if item.Name == target and not processedItems[item] then
+            table.insert(itemsToProcess, item)
+            processedItems[item] = true
+        end
+    end
+
+    if #itemsToProcess == 0 then return end
+
+    task.spawn(function()
+        for _, obj in ipairs(itemsToProcess) do
+            pcall(function()
+                if obj:IsA("BasePart") then
+                    obj.CFrame = hrp.CFrame + Vector3.new(0, 6, 0)
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    obj:SetPrimaryPartCFrame(hrp.CFrame + Vector3.new(0, 6, 0))
+                end
+            end)
+
+            startDragRemote:FireServer(obj)
+            storeRemote:InvokeServer(bag, obj)
+
+            local storedItem = itemBag:FindFirstChild(obj.Name)
+            if storedItem then
+                dropRemote:FireServer(bag, storedItem, false)
+            end
+
+            stopDragRemote:FireServer(obj)
+
+        end
+    end)
+end
+
+
+local function FastBringAll()
+    for _, obj in ipairs(workspace.Items:GetChildren()) do
+        if obj.Name == target then
+            pcall(function()
+                if obj:IsA("BasePart") then
+                    obj.CFrame = hrp.CFrame + Vector3.new(0, 9, 0)
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    obj:SetPrimaryPartCFrame(hrp.CFrame + Vector3.new(0, 9, 0))
+                end
+
+                startDragRemote:FireServer(obj)
+                local ok, stored = pcall(function()
+                    return storeRemote:InvokeServer(bag, obj)
+                end)
+
+                if not (ok and typeof(stored) == "Instance") then
+                    stored = itemBag:FindFirstChild(obj.Name)
+                end
+
+                if stored then
+                    dropRemote:FireServer(bag, stored, false)
+                end
+
+                stopDragRemote:FireServer(obj)
+            end)
+
+        end
+    end
+end
+
+local function InstantBringAll()
+    local objs = {}
+    local storedItems = {}
+
+    -- collect all targets first
+    for _, obj in ipairs(workspace.Items:GetChildren()) do
+        if obj.Name == target then
+            table.insert(objs, obj)
+        end
+    end
+
+    if #objs == 0 then return end
+
+    -- teleport everything instantly
+    for _, obj in ipairs(objs) do
+        if obj:IsA("BasePart") then
+            obj.CFrame = hrp.CFrame
+        elseif obj:IsA("Model") and obj.PrimaryPart then
+            obj:SetPrimaryPartCFrame(hrp.CFrame)
+        end
+    end
+
+    -- store items one by one
+    for _, obj in ipairs(objs) do
+        -- skip if already in the bag
+        if not itemBag:FindFirstChild(obj.Name) then
+            startDragRemote:FireServer(obj)
+            
+            local stored = storeRemote:InvokeServer(bag, obj)
+            if typeof(stored) ~= "Instance" then
+                stored = itemBag:FindFirstChild(obj.Name)
+            end
+
+            if stored then
+                table.insert(storedItems, stored)
+            end
+
+            stopDragRemote:FireServer(obj)
+        end
+    end
+
+    -- drop all stored items at once
+    for _, item in ipairs(storedItems) do
+        dropRemote:FireServer(bag, item, false)
+    end
+end
+
+local function BringAll()
+    for _, obj in ipairs(workspace.Items:GetChildren()) do
+        if not string.find(obj.Name:lower(), "chest") then
+            pcall(function()
+                if obj:IsA("BasePart") then
+                    obj.CFrame = hrp.CFrame + Vector3.new(0, 9, 0)
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    obj:SetPrimaryPartCFrame(hrp.CFrame + Vector3.new(0, 9, 0))
+                end
+
+                startDragRemote:FireServer(obj)
+                local ok, stored = pcall(function()
+                    return storeRemote:InvokeServer(bag, obj)
+                end)
+
+                if not (ok and typeof(stored) == "Instance") then
+                    stored = itemBag:FindFirstChild(obj.Name)
+                end
+
+                if stored then
+                    dropRemote:FireServer(bag, stored, false)
+                end
+
+                stopDragRemote:FireServer(obj)
+            end)
+        end
+    end
+end
+
+---------------------------------------------------------------------------------------------
+local function getSmallTreeTrunk()
+    for _, tree in pairs(workspace.Map.Foliage:GetChildren()) do
+        if tree.Name == "Small Tree" and tree:FindFirstChild("Trunk") then
+            return tree.Trunk
+        end
+    end
+end
+
+local function startFollowing(trunk)
+    if not trunk then return end
+
+    if not originalPositions[trunk] then
+        originalPositions[trunk] = trunk.CFrame
+    end
+    
+    
+
+    followConn = RunService.RenderStepped:Connect(function()
+        local forward = hrp.CFrame.LookVector * 2
+        trunk.CFrame = CFrame.new(hrp.Position + forward)
+    end)
+end
+
+-- stop following and restore
+local function stopFollowing(trunk)
+    if followConn then
+        followConn:Disconnect()
+        followConn = nil
+    end
+    if trunk and originalPositions[trunk] then
+        trunk.CFrame = originalPositions[trunk]
+        originalPositions[trunk] = nil
+    end
+end
+
+-- get nearest small tree trunk
+local function getNearestSmallTree()
+    local nearest, dist = nil, math.huge
+    for _, tree in pairs(workspace.Map.Foliage:GetChildren()) do
+        if tree.Name == "Small Tree" and tree:FindFirstChild("Trunk") then
+            local trunk = tree.Trunk
+            local d = (trunk.Position - hrp.Position).Magnitude
+            if d < dist then
+                dist = d
+                nearest = trunk
+            end
+        end
+    end
+    return nearest
+end
+
+-- toggle autofarm
+local function equipAxe()
+    local backpack = player:WaitForChild("Backpack")
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and string.find(tool.Name:lower(), "Axe") then
+            player.Character.Humanoid:EquipTool(tool)
+            return tool
+        end
+    end
+end
+
+-- toggle autofarm
+local function AutoChopTree(state)
+    autofarm = state -- true = ON, false = OFF
+
+    if autofarm then
+        -- keep axe equipped while autofarm is running
+        task.spawn(function()
+            while autofarm do
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid and (not humanoid:FindFirstChildOfClass("Tool")) then
+                    equipAxe()
+                end
+                task.wait(0.3)
+            end
+        end)
+
+        currentTrunk = getNearestSmallTree()
+        if currentTrunk then
+            startFollowing(currentTrunk)
+
+            -- listen for destruction
+            task.spawn(function()
+                while autofarm do
+                    if not currentTrunk or not currentTrunk.Parent then
+                        stopFollowing(currentTrunk)
+                        task.wait(0.3)
+                        currentTrunk = getNearestSmallTree()
+                        if currentTrunk then
+                            startFollowing(currentTrunk)
+                        end
+                    end
+                    task.wait(0.2)
+                end
+            end)
+        end
+    else
+        stopFollowing(currentTrunk)
+        currentTrunk = nil
+    end
+end
+
+local function setAutoClick(state)
+	if autoClick == state then return end -- no change
+	autoClick = state
+
+	if state then
+		print("✅ Auto Click: ON")
+		clickLoop = task.spawn(function()
+			while autoClick do
+				VirtualInput:SendMouseButtonEvent(0, 0, 0, true, game, 0)  -- M1 down
+				VirtualInput:SendMouseButtonEvent(0, 0, 0, false, game, 0) -- M1 up
+				task.wait(0.1) -- speed (0.1s = 10 CPS)
+			end
+		end)
+	else
+		if clickLoop then
+			task.cancel(clickLoop)
+			clickLoop = nil
+		end
+	end
+end
+
+---------------------------------------------------------------------------------------------
+local function isInside(red, green)
+	local gTop = green.AbsolutePosition.Y
+	local gBottom = gTop + green.AbsoluteSize.Y
+	local rY = red.AbsolutePosition.Y
+	return rY >= gTop and rY <= gBottom
+end
+
+RunService.RenderStepped:Connect(function()
+	if AutoReel and fishingUI.Visible then
+		if tick() - lastClick > cooldown then
+			if isInside(redLine, successArea) then
+				local x = workspace.CurrentCamera.ViewportSize.X / 2
+				local y = workspace.CurrentCamera.ViewportSize.Y / 2
+				VirtualInput:SendMouseButtonEvent(x, y, 0, true, nil, 0)
+				VirtualInput:SendMouseButtonEvent(x, y, 0, false, nil, 0)
+				lastClick = tick()
+			end
+		end
+	end
+end)
+
+
+
+
+---------------------------------------------------------------------------------------------
+local function fireAllBoundaryTouches()
+    local parts = {}
+    for _, part in ipairs(boundary:GetDescendants()) do
+        if part:IsA("BasePart") then
+            table.insert(parts, part)
+        end
+    end
+
+    for _, part in ipairs(parts) do
+        firetouchinterest(hrp, part, 0)
+    end
+
+    for _, part in ipairs(parts) do
+        firetouchinterest(hrp, part, 1)
+    end
+end
+
+---------------------------------------------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+    if PlantAura then
+        for _, obj in ipairs(itemsFolder:GetChildren()) do
+            if obj:IsA("Model") and obj.Name:find("Sapling") then
+                local pos
+                if obj.PrimaryPart then
+                    pos = obj.PrimaryPart.Position
+                else
+                    local basePart = obj:FindFirstChildWhichIsA("BasePart")
+                    if basePart then
+                        pos = basePart.Position
+                    end
+                end
+
+                if pos then
+                    local args = {
+                        obj,
+                        pos
+                    }
+                    PlantSapling:InvokeServer(unpack(args))
+                end
+            end
+        end
+    end
+end)
+
+---------------------------------------------------------------------------------------------
+local entranceSize = math.rad(2 / 100 * 57.3)
+local radius = 100
+
+local function GetWallPosition(i, total, facingAngle)
+    local campPos = campfire:GetPivot().Position
+    local angle = (i / total) * math.pi * 2
+
+    if angle > (facingAngle - entranceSize) and angle < (facingAngle + entranceSize) then
+        return nil
+    end
+
+    return campPos + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+end
+
+RunService.Heartbeat:Connect(function()
+    if AutoWall then
+        local saplings = {}
+        for _, obj in ipairs(itemsFolder:GetChildren()) do
+            if obj:IsA("Model") and obj.Name:find("Sapling") then
+                local base = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                if base and (base.Position - campfire:GetPivot().Position).Magnitude <= radius then
+                    table.insert(saplings, obj)
+                end
+            end
+        end
+
+        -- entrance faces from campfire -> player
+        local campPos = campfire:GetPivot().Position
+        local char = player.Character or player.CharacterAdded:Wait()
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local facingAngle = 0
+        if root then
+            local dir = (root.Position - campPos).Unit
+            facingAngle = math.atan2(dir.Z, dir.X)
+        end
+
+        local placed = 0
+        for i, sapling in ipairs(saplings) do
+            local targetPos = GetWallPosition(i, #saplings, facingAngle)
+            if targetPos then
+                placed += 1
+                PlantSapling:InvokeServer(sapling, targetPos)
+            end
+        end
+    end
+end)
+
+---------------------------------------------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+	if AutoFluteEnable and fluteFrame.Visible then
+		Flutesuccess.Position = Flutebar.Position
+	end
+end)
+
+---------------------------------------------------------------------------------------------
+local function enableFake()
+    if FakeHotbox then return end
+    FakeHotbox = true
+
+    -- Hide real character
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
+        elseif part:IsA("Decal") then
+            part.Transparency = 1
+        end
+    end
+
+    -- Create fake hitbox
+    fake = Instance.new("Part")
+    fake.Name = "FakeHitbox"
+    fake.Size = Vector3.new(3, 7, 3)
+    fake.CFrame = hrp.CFrame
+    fake.Color = Color3.fromRGB(255, 0, 0)
+    fake.Material = Enum.Material.ForceField
+    fake.Anchored = false
+    fake.CanCollide = false
+    fake.Parent = workspace
+
+    -- Humanoid for NPC targeting
+    fakeHum = Instance.new("Humanoid")
+    fakeHum.Health = 100
+    fakeHum.MaxHealth = 100
+    fakeHum.Parent = fake
+
+    -- Weld fake to HRP
+    weld = Instance.new("WeldConstraint")
+    weld.Part0 = fake
+    weld.Part1 = hrp
+    weld.Parent = fake
+end
+
+local function disableFake()
+    if not FakeHotbox then return end
+    FakeHotbox = false
+
+    -- Show real character
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 0
+            part.CanCollide = true
+        elseif part:IsA("Decal") then
+            part.Transparency = 0
+        end
+    end
+
+    -- Remove fake
+    if fake then fake:Destroy() end
+    if fakeHum then fakeHum:Destroy() end
+    if weld then weld:Destroy() end
+end
+
+local Info = Window:CreateTab("Information", 4483362458)
+local Main = Window:CreateTab("Main", 4483362458)
+
+-- // Available Items List
+local allItems = {
+     "Alpha Wolf Pelt", "Anvil Front", "Anvil Back", "Apple", "Bandage", "Bear Corpse", "Bear Pelt",
+     "Berry", "Biofuel", "Bolt", "Broken Fan", "Bunny Foot", "Carrot", "Coal", "Coin Stack",
+     "Cooked Steak", "Cooked morsel", "Chainsaw", "Cultist Gem", "Fuel Canister", "Hologram Emmiter",
+     "Item Chest", "Laser Fence Blueprint", "Leather Body", "Iron Body", "Thorn Body", "Log", "Medkit",
+     "Morsel", "Old Flashlight", "Old Radio", "Good Sack", "Strong Axe", "Oil Barrel", "Old Car Engine",
+     "Rifle", "Rifle Ammo", "Revolver", "Revolver Ammo", "Ray Gun", "Sapling", "Sheet Metal", "Steak",
+     "Gem of the Forest Fragment", "Tyre", "Washing Machine", "Broken Microwave"
+ }
+ 
+ local CraftItem = {
+     "Map", "Old Bed", "Bunny Trap", "Sun Dial", "Regular Bed", "ComPass", "Freezer",
+     "Farm Plot", "Wood Rain Storage", "Shelf", "Log Wall", "Bear Trap", "Crock Pot", "Good Bed", "Radar",
+     "Boost Pad", "BioFuel Procesor", "Lighting Rod", "Torch", "Giant  Bed", "Oil Drill",
+     "Ammo Crate", "Teleporter", "Empty", "Empty", "Empty", "Empty", "Empty",
+     "Empty", "Empty", "Empty", "Empty", "Empty", "Empty", "Empty",
+     "Empty", "Empty", "Empty", "Empty", "Empty", "Empty", "Empty", "Empty",
+     "Empty", "Empty", "Empty", "Empty"
+ }
+ 
+ local AllItems2 = {
+     "Bolt", "Broken Fan", "Chair", "Coal",
+     "Fuel Canister",
+     "Log","Metal Chair",
+     "Old Radio", "Oil Barrel", "Old Car Engine",
+     "Sheet Metal",
+     "Tyre", "Washing Machine", "Broken Microwave"
+ }
+local Misc = Window:CreateTab("Misc", 4483362458)
+local Player = Window:CreateTab("Player", 4483362458)
+local Visuals = Window:CreateTab("Visuals", 4483362458)
+local Setting = Window:CreateTab("Setting", 4483362458)
+
+--// InfoTab
+local TimeLabel = Info:CreateLabel("Server Age : 0:00:00:0", 4483362458, Color3.fromRGB(190, 190, 190), false)
+
+-- // Update loop
+task.spawn(function()
+	while task.wait(1) do
+		local total = math.floor(workspace.DistributedGameTime) -- in seconds
+		local hrs = math.floor(total / 3600)
+		local mins = math.floor((total % 3600) / 60)
+		local secs = total % 60
+
+		TimeLabel:Set("Server Age : " .. string.format("%02d:%02d:%02d", hrs, mins, secs))
+	end
+end)
+
+-- // Paragraph
+local WorkspaceItemsParagraph = Info:CreateParagraph({
+    Title = "Available Items",
+    Content = "Loading..."
+})
+
+-- // First build
+do
+    local counts = {}
+    for _, item in ipairs(itemsFolder:GetChildren()) do
+        counts[item.Name] = (counts[item.Name] or 0) + 1
+    end
+
+    local parts = {}
+    for name, count in pairs(counts) do
+        table.insert(parts, name .. " [" .. count .. "]")
+    end
+    local content = table.concat(parts, " ")
+
+    WorkspaceItemsParagraph:Set({
+        Title = "Available Items",
+        Content = content ~= "" and content or "No items found"
+    })
+end
+
+itemsFolder.ChildAdded:Connect(function()
+    local counts = {}
+    for _, item in ipairs(itemsFolder:GetChildren()) do
+        counts[item.Name] = (counts[item.Name] or 0) + 1
+    end
+
+    local parts = {}
+    for name, count in pairs(counts) do
+        table.insert(parts, name .. " [" .. count .. "]")
+    end
+    local content = table.concat(parts, " ")
+
+    WorkspaceItemsParagraph:Set({
+        Title = "Available Items",
+        Content = content ~= "" and content or "No items found"
+    })
+end)
+
+itemsFolder.ChildRemoved:Connect(function()
+    local counts = {}
+    for _, item in ipairs(itemsFolder:GetChildren()) do
+        counts[item.Name] = (counts[item.Name] or 0) + 1
+    end
+
+    local parts = {}
+    for name, count in pairs(counts) do
+        table.insert(parts, name .. " [" .. count .. "]")
+    end
+    local content = table.concat(parts, " ")
+
+    WorkspaceItemsParagraph:Set({
+        Title = "Available Items",
+        Content = content ~= "" and content or "No items found"
+    })
+end)
+
+
+--// MainTab
+local TreeSection = Main:CreateSection(">>                    Tree                    <<")
+local AutoTreeToggle = Main:CreateToggle({
+   Name = "Auto Tree",
+   CurrentValue = false,
+   Flag = "FarmTree", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+	AutoChopTree(Value)
+   end,
+})
+local AutoClickToggle = Main:CreateToggle({
+   Name = "Auto Click",
+   CurrentValue = false,
+   Flag = "ClickTree", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+	setAutoClick(Value)
+   end,
+})
+local ChopAuraSection = Main:CreateSection(">>                    Chop Aura                    <<")
+local function findTool(name)
+    local char = player.Character
+    if char then
+        for _,v in ipairs(char:GetChildren()) do
+            if v:IsA("Tool") and v.Name == name then return v end
+        end
+    end
+    local inv = player:FindFirstChild("Inventory")
+    if inv then
+        local t = inv:FindFirstChild(name)
+        if t and t:IsA("Tool") then return t end
+    end
+    local bp = player:FindFirstChild("Backpack")
+    if bp then
+        local t = bp:FindFirstChild(name)
+        if t and t:IsA("Tool") then return t end
+    end
+end
+
+local ChopAuraToolInput = Main:CreateInput({
+   Name = "Chop Tool",
+   CurrentValue = "Old Axe",
+   PlaceholderText = "Enter Tool Name",
+   RemoveTextAfterFocusLost = true,
+   Flag = "ChopToolName",
+   Callback = function(Value)
+        TOOL_NAME2 = Value
+   end,
+})
+
+
+local chopLoop
+
+local chopLoopThread -- will hold the task thread
+
+local ChopAllToggle = Main:CreateToggle({
+    Name = "Chop Aura",
+    CurrentValue = false,
+    Flag = "ChopAll",
+    Callback = function(Value)
+        ChopAuraEnabled = Value
+
+        -- if turning OFF, cancel the loop
+        if not Value and chopLoopThread then
+            task.cancel(chopLoopThread)
+            chopLoopThread = nil
+            return
+        end
+
+        -- if turning ON, start the loop safely
+        if Value then
+            chopLoopThread = task.spawn(function()
+                while ChopAuraEnabled do
+                    local tool = player.Inventory:FindFirstChild(TOOL_NAME2)
+                    if tool then
+                        local swingId = "39_" .. player.UserId
+
+                        -- prioritize Small Trees first
+                        local models = {}
+                        for _, obj in ipairs(workspace.Map.Foliage:GetChildren()) do
+                            if obj.Name == "Small Tree" and obj.PrimaryPart then
+                                table.insert(models, obj)
+                            end
+                        end
+                        for _, obj in ipairs(workspace.Map.Landmarks:GetChildren()) do
+                            if obj:IsA("Model") and obj.PrimaryPart then
+                                table.insert(models, obj)
+                            end
+                        end
+
+                        -- hit up to 10 models per batch
+                        for i = 1, math.min(10, #models) do
+                            local obj = models[i]
+                            task.spawn(function()
+                                local args = {obj, tool, swingId, obj:GetModelCFrame()}
+                                pcall(function()
+                                    DamageRemote:InvokeServer(unpack(args))
+                                end)
+                            end)
+                        end
+                    end
+
+                    task.wait(0.2) -- delay between batches
+                end
+            end)
+        end
+    end,
+})
+local BuildSection = Main:CreateSection(">>                    Build                    <<")
+local PlantAuraToggle = Main:CreateToggle({
+    Name = "Auto Plant Sapling",
+    CurrentValue = false,
+    Flag = "PlantAura",
+    Callback = function(Value)
+		PlantAura = Value
+    end,
+})
+local BuildWallSaplingToggle = Main:CreateToggle({
+    Name = "Build Wall Of Sapling",
+    CurrentValue = false,
+    Flag = "BuildWallSapling",
+    Callback = function(Value)
+        AutoWall = Value
+    end,
+})
+local DecorateSection = Main:CreateSection(">>                    Decorate                    <<")
+local AutoPickUpAllToggle = Main:CreateToggle({
+    Name = "Auto Pick-Up ALL Structures",
+    CurrentValue = false,
+    Flag = "AutoPickUpAll",
+    Callback = function(Value)
+        AutoAll = Value
+    end,
+})
+
+local TapPickUpToggle = Main:CreateToggle({
+    Name = "Tap to Pick-Up",
+    CurrentValue = false,
+    Flag = "TapPickUp",
+    Callback = function(Value)
+        TapPickUp = Value
+    end,
+})
+
+-- Function to pick up a structure
+local function PickUpStructure(structure)
+    pcall(function()
+        PickUpModel:InvokeServer(structure)
+    end)
+end
+
+-- Loop for AutoAll
+RunService.Heartbeat:Connect(function()
+    if AutoAll then
+        for _, structure in ipairs(workspace.Structures:GetChildren()) do
+            if structure:IsA("Model") then
+                PickUpStructure(structure)
+            end
+        end
+    end
+end)
+
+-- Click (PC)
+mouse.Button1Down:Connect(function()
+    if TapPickUp then
+        local target = mouse.Target
+        if target then
+            local structure = target:FindFirstAncestorOfClass("Model")
+            if structure and structure.Parent == workspace.Structures then
+                PickUpStructure(structure)
+            end
+        end
+    end
+end)
+
+-- Tap (Mobile)
+UIS.TouchStarted:Connect(function(input, processed)
+    if TapPickUp and not processed then
+        local target = mouse.Target
+        if target then
+            local structure = target:FindFirstAncestorOfClass("Model")
+            if structure and structure.Parent == workspace.Structures then
+                PickUpStructure(structure)
+            end
+        end
+    end
+end)
+local KillSection = Main:CreateSection(">>                    Kill                    <<")
+local AutoKillRangeSlider = Main:CreateSlider({
+	Name = "Kill Range",
+	Range = {0, 150},
+	Increment = 5,
+	Suffix = "studs",
+	CurrentValue = 50,
+	Flag = "KillRange",
+	Callback = function(Value)
+		MAX_DISTANCE = Value
+	end,
+})
+
+local TargetToolInput = Main:CreateInput({
+   Name = "Tool",
+   CurrentValue = "Old Axe",
+   PlaceholderText = "Place The Name Of the Tool",
+   RemoveTextAfterFocusLost = true,
+   Flag = "ToolName",
+   Callback = function(Value)
+		TOOL_NAME = Value
+   end,
+})
+
+local AutoKillToggle = Main:CreateToggle({
+	Name = "Kill Aura",
+	CurrentValue = false,
+	Flag = "KillAura",
+	Callback = function(Value)
+		attacking = Value
+		if not attacking then return end
+
+		task.spawn(function()
+			while attacking do
+				local charRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				local tool = player:WaitForChild("Inventory"):FindFirstChild(TOOL_NAME)
+				if charRoot and tool then
+					for _, npc in ipairs(charactersFolder:GetChildren()) do
+						if not Players:GetPlayerFromCharacter(npc) and npc.PrimaryPart then
+							local dist = (npc.PrimaryPart.Position - charRoot.Position).Magnitude
+							if dist <= MAX_DISTANCE then
+								DamageRemote:InvokeServer(
+									npc,
+									tool,
+									"20_" .. player.UserId,
+									npc.PrimaryPart.CFrame
+								)
+							end
+						end
+					end
+				end
+				task.wait() -- only yields a frame to not crash Roblox
+			end
+		end)
+	end,
+})
+local KillAllNpcToggle = Main:CreateToggle({
+    Name = "Kill All NPC",
+    CurrentValue = false,
+    Flag = "KillAllNpc",
+    Callback = function(Value)
+        KillAllNpc = Value
+        if not KillAllNpc then return end
+
+        task.spawn(function()
+            while KillAllNpc do
+                local tool = player:WaitForChild("Inventory"):FindFirstChild(TOOL_NAME) -- same as Kill Aura
+                if tool then
+                    for _, npc in ipairs(workspace.Characters:GetChildren()) do
+                        if not Players:GetPlayerFromCharacter(npc) and npc.PrimaryPart then
+                            DamageRemote:InvokeServer(
+                                npc,
+                                tool,
+                                "20_" .. player.UserId,
+                                npc.PrimaryPart.CFrame
+                            )
+                        end
+                    end
+                end
+                task.wait(0.2) -- avoid lag
+            end
+        end)
+    end,
+})
+
+
+local BringItemsSection = Main:CreateSection(">>                    Bring Item                    <<")
+local MethodDropdown = Main:CreateDropdown({
+   Name = "Method Speed",
+   Options = {"Normal","Fast","Instant"},
+   CurrentOption = {"Normal"},
+   MultipleOptions = false,
+   Flag = "MethodsOfbring", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+		Method = Value[1]
+   end,
+})
+local TargetItemDropdown = Main:CreateDropdown({
+   Name = "Target Item",
+   Options = allItems,
+   CurrentOption = {"Log"}, -- must be in a table and string, not Log variable
+   MultipleOptions = false,
+   Flag = "BringTargetWhitch",
+   Callback = function(Value)
+      target = Value[1] -- Value is a table from Rayfield, so take the first element
+   end,
+})
+local TargetItemInput = Main:CreateInput({
+   Name = "Target Item",
+   CurrentValue = "",
+   PlaceholderText = "Place Target Object Name",
+   RemoveTextAfterFocusLost = true,
+   Flag = "BRINGTARGETTEXTBOX",
+   Callback = function(Value)
+	target = Value
+   end,
+})
+local BringItemButton = Main:CreateButton({
+   Name = "Bring Items",
+   Callback = function()
+      if Method == "Normal" then
+         NormalBringAll()
+      elseif Method == "Instant" then
+         InstantBringAll()
+      elseif Method == "Fast" then
+         FastBringAll()
+      end
+   end,
+})
+local SpaceSection = Main:CreateSection("")
+-- Target location map
+local TargetLocations = {
+    ["Campfire"] = workspace.Map.Campground:WaitForChild("MainFire"),
+    ["Crafting Bench"] = workspace.Map.Campground:WaitForChild("CraftingBench")
+}
+
+local selectedTarget = "Campfire"
+local selectedItems = {}
+
+-- Helper: always returns a valid CFrame
+local function GetTargetCFrame(name)
+    local target = TargetLocations[name]
+    if not target then return hrp.CFrame end
+    if target:IsA("BasePart") then
+        return target.CFrame + Vector3.new(0, 6, 0)
+    elseif target:IsA("Model") then
+        return target:GetPivot() + Vector3.new(0, 6, 0)
+    else
+        return hrp.CFrame
+    end
+end
+
+-- Dropdown for target position
+local TargetCFrameDropdown = Main:CreateDropdown({
+   Name = "Target Pos",
+   Options = {"Campfire","Crafting Bench"},
+   CurrentOption = {"Campfire"},
+   MultipleOptions = false,
+   Flag = "TargetCFrame",
+   Callback = function(Value)
+       selectedTarget = Value[1]
+   end,
+})
+
+-- Dropdown for multiple items
+local itemNames = {}
+for _, obj in ipairs(workspace.Items:GetChildren()) do
+    table.insert(itemNames, obj.Name)
+end
+
+-- Dropdown for selecting multiple items
+local MultiItemDropdown = Main:CreateDropdown({
+    Name = "Select Items",
+    Options = AllItems2,
+    CurrentOption = {},
+    MultipleOptions = true,
+    Flag = "MultiBringItems",
+    Callback = function(Value)
+        selectedItems = Value
+    end,
+})
+
+-- Unified bring function
+local function BringItems()
+    local targetCFrame = GetTargetCFrame(selectedTarget)
+    local processedItems = {}
+    local itemsToProcess = {}
+
+    -- collect all matching items
+    for _, item in ipairs(workspace.Items:GetChildren()) do
+        if table.find(selectedItems, item.Name) and not processedItems[item] then
+            table.insert(itemsToProcess, item)
+            processedItems[item] = true
+        end
+    end
+
+    if #itemsToProcess == 0 then return end
+
+    task.spawn(function()
+        for _, obj in ipairs(itemsToProcess) do
+            pcall(function()
+                -- teleport
+                if obj:IsA("BasePart") then
+                    obj.CFrame = targetCFrame + Vector3.new(0, 6, 0)
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    obj:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 6, 0))
+                end
+            end)
+
+
+            startDragRemote:FireServer(obj)
+            storeRemote:InvokeServer(bag, obj)
+
+            local storedItem = itemBag:FindFirstChild(obj.Name)
+            if storedItem then
+                dropRemote:FireServer(bag, storedItem, false)
+            end
+
+            stopDragRemote:FireServer(obj)
+            task.wait() -- slight yield to reduce desync
+        end
+    end)
+end
+local BringItemsToggle = Main:CreateToggle({
+   Name = "Teleport Items",
+   CurrentValue = false,
+   Flag = "BringItems",
+   Callback = function(Value)
+      Bringing = Value
+
+      if not Bringing then
+         processedItems = {} -- reset when OFF
+         return
+      end
+
+      task.spawn(function()
+         while Bringing do
+            if not selectedTarget then break end
+            local targetCFrame = GetTargetCFrame(selectedTarget)
+            if not targetCFrame then break end
+
+            for _, item in ipairs(workspace.Items:GetChildren()) do
+               if table.find(selectedItems, item.Name) and not processedItems[item] then
+                  processedItems[item] = true
+                  pcall(function()
+                     if item:IsA("BasePart") then
+                        item.CFrame = targetCFrame + Vector3.new(0, 6, 0)
+                     elseif item:IsA("Model") and item.PrimaryPart then
+                        item:PivotTo(targetCFrame + Vector3.new(0, 6, 0))
+                     end
+                  end)
+
+                  startDragRemote:FireServer(item)
+                  storeRemote:InvokeServer(bag, item)
+
+                  local storedItem = itemBag:FindFirstChild(item.Name)
+                  if storedItem then
+                     dropRemote:FireServer(bag, storedItem, false)
+                  end
+
+                  stopDragRemote:FireServer(item)
+                  task.wait()
+               end
+            end
+
+            task.wait(0.2)
+         end
+      end)
+   end,
+})
+
+local BringMultiButton = Main:CreateButton({
+   Name = "Teleport All Items",
+   Callback = function()
+      BringItems()
+   end,
+})
+local Space3Section = Main:CreateSection("")
+local TargetChildToKidnapDropdown = Main:CreateDropdown({
+    Name = "Target Child",
+    Options = {"Lost Child","Lost Child2","Lost Child3","Lost Child4"},
+    CurrentOption = {"Lost Child"},
+    MultipleOptions = false,
+    Flag = "TargetChildToKidnap",
+    Callback = function(Value)
+        TargetChild = Value[1] or TargetChild
+    end,
+})
+
+-- Kidnap button
+local KidnapLostChildButton = Main:CreateButton({
+    Name = "Kidnap Lost Child",
+    Callback = function()
+        local targetModel = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(TargetChild)
+        if not targetModel then
+            warn("Target model not found:", TargetChild)
+            return
+        end
+
+        local targetBase = targetModel.PrimaryPart or targetModel:FindFirstChildWhichIsA("BasePart")
+        if not targetBase then
+            warn("Target has no base part to teleport to.")
+            return
+        end
+
+        local origCFrame = hrp.CFrame
+
+        local ok, err = pcall(function()
+            -- teleport player above target
+            hrp.CFrame = targetBase.CFrame
+            task.wait(0.1)
+
+            -- store on server
+            local stored
+            local storeOk, storeRes = pcall(function()
+                return storeRemote:InvokeServer(bag, targetModel)
+            end)
+            if storeOk and typeof(storeRes) == "Instance" then
+                stored = storeRes
+            else
+                task.wait(0.1)
+                stored = itemBag:FindFirstChild(targetModel.Name)
+            end
+
+            hrp.CFrame = origCFrame
+            task.wait(0.1)
+
+            if stored then
+                pcall(function()
+                    dropRemote:FireServer(bag, stored, origCFrame)
+                end)
+            else
+                print("Can't Kidnap")
+            end
+        end)
+
+        if not ok then
+            print("")
+        end
+    end,
+})
+local Space2Section = Main:CreateSection("")
+local BringAllButton = Main:CreateButton({
+   Name = "Bring All Items",
+   Callback = function()
+		BringAll()
+   end,
+})
+local CraftingSection = Main:CreateSection(">>                    Crafting                    <<")
+local CraftItemDropdown = Main:CreateDropdown({
+    Name = "Craft Target",
+    Options = CraftItem,
+    CurrentOption = {"Map"},
+    MultipleOptions = false,
+    Flag = "CraftTarget",
+    Callback = function(Value)
+        CraftTarget5 = Value[1]
+    end,
+})
+
+local CraftItemButton = Main:CreateButton({
+    Name = "Craft",
+    Callback = function()
+        if CraftTarget5 then
+            local args = { CraftTarget5 }
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("RemoteEvents")
+                :WaitForChild("CraftItem")
+                :InvokeServer(unpack(args))
+        end
+    end,
+})
+local ChestSection = Main:CreateSection(">>                    Chest                    <<")
+local OpenAllChestButton = Main:CreateButton({
+   Name = "Open All Chest",
+   Callback = function()
+      local itemsFolder = workspace:WaitForChild("Items")
+      local player = game.Players.LocalPlayer
+      local hrp = player.Character:WaitForChild("HumanoidRootPart")
+
+      local function handleChest(chest)
+         if not chest:IsA("Model") or not chest.Name:lower():find("chest") then return end
+
+         -- wait until chest has PrimaryPart
+         if not chest.PrimaryPart then
+            chest:GetPropertyChangedSignal("PrimaryPart"):Wait()
+         end
+
+         local originalCFrame = chest:GetPivot()
+         chest:PivotTo(hrp.CFrame + Vector3.new(0, 5, 0))
+
+         task.wait(0.3)
+
+         -- fire all proximity prompts
+         for _, obj in ipairs(chest:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+               obj.MaxActivationDistance = 20
+               fireproximityprompt(obj)
+            end
+         end
+
+         task.wait(0.3)
+
+         -- return chest
+         chest:PivotTo(originalCFrame)
+      end
+
+      -- open all existing chests once
+      for _, chest in ipairs(itemsFolder:GetChildren()) do
+         handleChest(chest)
+      end
+   end,
+})
+local MapSection = Main:CreateSection(">>                    Map                    <<")
+
+local AutoFadeFogButton = Main:CreateButton({
+   Name = "Auto Fade Fog",
+   Callback = function()
+		fireAllBoundaryTouches()
+   end,
+})
+
+--// MiscTab
+local FishingSection = Misc:CreateSection(">>                    Fishing                    <<")
+local AutoReelToggle = Misc:CreateToggle({
+   Name = "Auto Reel",
+   CurrentValue = false,
+   Flag = "AutoReel", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   AutoReel = Value
+   end,
+})
+local PetTamingSection = Misc:CreateSection(">>                    Pet Taming                    <<")
+local AutoFluteToggle = Misc:CreateToggle({
+   Name = "Auto Flute",
+   CurrentValue = false,
+   Flag = "AutoFlute", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   AutoFluteEnable = Value
+   end,
+})
+
+
+-- // PlayerTab
+local function getHumanoid()
+    local char = player.Character
+    if char then
+        return char:FindFirstChild("Humanoid")
+    end
+    return nil
+end
+local CharHitboxToggle = Player:CreateToggle({
+   Name = "Character Hitbox",
+   CurrentValue = false,
+   Flag = "CharHitbox", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+        if Value then
+            enableFake()
+        else
+            disableFake()
+        end
+   end,
+})
+-- Walk Speed
+local WsSlider = Player:CreateSlider({
+    Name = "Walk Speed",
+    Range = {0, 500},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Flag = "WalkSpeed",
+    Callback = function(Value)
+        local humanoid = getHumanoid()
+        if humanoid then
+            humanoid.WalkSpeed = Value
+        end
+    end,
+})
+
+local WsInput = Player:CreateInput({
+    Name = "Walk Speed",
+    CurrentValue = "16",
+    PlaceholderText = "Enter Speed",
+    RemoveTextAfterFocusLost = false,
+    Flag = "WsInput",
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num then
+            local humanoid = getHumanoid()
+            if humanoid then
+                humanoid.WalkSpeed = num
+                WsSlider:Set(num)
+            end
+        end
+    end,
+})
+
+local WsReset = Player:CreateButton({
+    Name = "Reset Walk Speed",
+    Callback = function()
+        local humanoid = getHumanoid()
+        if humanoid then
+            humanoid.WalkSpeed = 16
+        end
+        WsSlider:Set(16)
+    end,
+})
+
+-- Jump Power
+local JhSlider = Player:CreateSlider({
+    Name = "Jump Height",
+    Range = {0, 500},
+    Increment = 1,
+    Suffix = "JP",
+    CurrentValue = 50,
+    Flag = "JumpHeight",
+    Callback = function(Value)
+        local humanoid = getHumanoid()
+        if humanoid then
+            humanoid.JumpHeigth = Value
+        end
+    end,
+})
+
+local JhInput = Player:CreateInput({
+    Name = "Jump Height",
+    CurrentValue = "7.2",
+    PlaceholderText = "Enter Jump Height",
+    RemoveTextAfterFocusLost = false,
+    Flag = "JpInput",
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num then
+            local humanoid = getHumanoid()
+            if humanoid then
+                humanoid.JumpHeigth = num
+                JhSlider:Set(num)
+            end
+        end
+    end,
+})
+
+local JpReset = Player:CreateButton({
+    Name = "Reset Jump Height",
+    Callback = function()
+        local humanoid = getHumanoid()
+        if humanoid then
+            humanoid.JumpHeigth = 7.2
+        end
+        JhSlider:Set(7.2)
+    end,
+})
+
+-- Update both sliders on respawn
+player.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid")
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = WsSlider.CurrentValue
+        humanoid.JumpPower = JpSlider.CurrentValue
+    end
+end)
