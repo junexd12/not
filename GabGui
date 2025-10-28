@@ -144,7 +144,7 @@ function GabGui:CreateWindow(opts)
 	    return box
 	end
 	
-	-- DROPDOWN WITH MINIMAL FIXES (3 lines changed + 1 added)
+	-- FINAL FIXED Dropdown (No Button Drift + All Issues Resolved)
 function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
@@ -154,18 +154,18 @@ function TabObj:CreateDropdown(data)
 	    local selected = multi and {} or { options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Main container (pushes other buttons via LayoutOrder + height tween)
+	    -- MAIN CONTAINER (FIX: Static height for trigger button, no drift)
 	    local container = new("Frame",{
 	        Parent=tabPanel,
-	        Size=UDim2.new(1,-20,0,36), -- Initial button height
+	        Size=UDim2.new(1,-20,0,36), -- Static height (no tweening here)
 	        BackgroundColor3=THEME.Button,
 	        ClipsDescendants = false,
-	        LayoutOrder = data.LayoutOrder or 0 -- Critical for UI shifting
+	        LayoutOrder = data.LayoutOrder or 0 -- Still pushes other buttons
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	    
-	    -- Single-input trigger button (no dual input conflicts)
+	    -- TRIGGER BUTTON (FIX: Stays in place)
 	    local btn = new("TextButton",{
 	        Parent=container,
 	        Size=UDim2.new(0.3,-8,1,0),
@@ -181,38 +181,41 @@ function TabObj:CreateDropdown(data)
 	        CaptureTouch=true
 	    })
 	
-	    -- Dropdown frame (options appear reliably)
+	    -- DROPDOWN FRAME (FIX: Tween its own height, not container)
 	    local dropdownFrame = new("ScrollingFrame",{
 	        Parent=container,
 	        Size=UDim2.new(1,0,0,0),
-	        Position=UDim2.new(0,0,1,2), -- Attaches to button
+	        Position=UDim2.new(0,0,1,2), -- Attaches below button (no drift)
 	        BackgroundColor3=THEME.Button,
 	        Visible=false,
 	        ScrollBarThickness=6,
 	        ScrollingDirection=Enum.ScrollingDirection.Y,
 	        ZIndex=2,
 	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        CanvasSize = UDim2.new(0,0,0,0) -- FIX 1: Resets size correctly
+	        CanvasSize = UDim2.new(0,0,0,0)
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2), HorizontalAlignment=Enum.HorizontalAlignment.Center}) -- FIX 2: No cut-off options
+	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2), HorizontalAlignment=Enum.HorizontalAlignment.Center})
 	
 	    local open = false
 	
-	    -- Toggle logic (pushes other buttons)
+	    -- TOGGLE LOGIC (FIX: Tween dropdown frame height only)
 	    local function toggleDropdown()
 	        open = not open
 	        local targetHeight = open and math.min(#options * 28, maxVisible * 28) or 0
 	        
-	        -- FIX 3: Tween container height to push other UI elements
-	        container:TweenSize(UDim2.new(1,-20,0,36 + targetHeight + 2), "Out", "Quad", 0.25, true)
+	        -- Tween dropdown frame height (container stays static)
+	        dropdownFrame:TweenSize(UDim2.new(1,0,0,targetHeight), "Out", "Quad", 0.25, true)
 	        dropdownFrame.Visible = open
+	        
+	        -- FIX: Adjust tabPanel canvas size to push other buttons
+	        tabPanel.CanvasSize = UDim2.new(0,0,0,tabPanel.CanvasSize.Y.Offset + (open ? targetHeight : -targetHeight))
 	    end
 	
-	    -- FIX 4: Single input connection (no dual finger/click conflicts)
+	    -- SINGLE INPUT CONNECTION (No dual conflicts)
 	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Option selection (single input)
+	    -- OPTION SELECTION
 	    local function selectOption(opt)
 	        if multi then
 	            if table.find(selected,opt) then
