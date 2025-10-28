@@ -153,13 +153,13 @@ function TabObj:CreateDropdown(data)
 	    local selected = multi and {} or {options[1]}
 	
 	    -- Main container inside UIListLayout
-	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button, ClipsDescendants = true}) -- Added ClipsDescendants
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	    local btn = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=selected[1] or "▼", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
 	
-	    -- Dropdown frame (inside UIListLayout)
-	    local dropdownFrame = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,0,0,0), BackgroundColor3=THEME.Button, Visible = false})
+	    -- Dropdown frame (inside container)
+	    local dropdownFrame = new("Frame",{Parent=container, Size=UDim2.new(1,0,0,0), Position = UDim2.new(0,0,1,4), BackgroundColor3=THEME.Button, Visible = false}) -- Parent to container, adjust position
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
 	
