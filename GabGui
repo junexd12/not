@@ -146,123 +146,115 @@ function GabGui:CreateWindow(opts)
 	
 	-- Dropdown
 function TabObj:CreateDropdown(data)
-	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
-	    local multi = data.MultipleOptions or false
-	    local selected = multi and {} or { options[1] }
-	    local maxVisible = data.MaxVisibleOptions or 5
-	
-	    -- Main container (fixed height for the button)
-	    local container = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button,
-	        ClipsDescendants = true,
-	        LayoutOrder = data.LayoutOrder or 0
-	    })
-	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	
-	    -- Label
-	    local label = new("TextLabel",{
-	        Parent = container,
-	        Size = UDim2.new(0.7,0,1,0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextXAlignment = Enum.TextXAlignment.Left,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14
-	    })
-	
-	    -- Button (fixed)
-	    local btn = new("TextButton",{
-	        Parent = container,
-	        Size = UDim2.new(0.3,-8,1,0),
-	        Position = UDim2.new(0.7,4,0,0),
-	        Text = selected[1] or "▼",
-	        BackgroundTransparency = 1,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.GothamBold,
-	        TextSize = 14,
-	        ZIndex = 3,
-	        Active = true,
-	        CaptureMouse = true,
-	        CaptureTouch = true
-	    })
-	
-	    -- Dropdown frame (scrollable)
-	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = container,
-	        Size = UDim2.new(1,0,0,0), -- start collapsed
-	        Position = UDim2.new(0,0,1,0),
-	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        ScrollingDirection = Enum.ScrollingDirection.Y,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ClipsDescendants = true
-	    })
-	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
-	
-	    local open = false
-	
-	    -- Toggle dropdown
-	    local function toggleDropdown()
-	        open = not open
-	        local totalHeight = #options * 28
-	        local targetHeight = math.min(totalHeight, maxVisible * 28)
-	        dropdownFrame:TweenSize(
-	            UDim2.new(1,0,0,(open and targetHeight or 0)),
-	            "Out",
-	            "Quad",
-	            0.25,
-	            true
-	        )
-	    end
-	
-	    btn.InputEnded:Connect(function(input, gameProcessedEvent)
-	        if not gameProcessedEvent and (input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch) then
-	            toggleDropdown()
-	        end
-	    end)
-	
-	    local function selectOption(opt)
-	        if multi then
-	            if table.find(selected,opt) then
-	                table.remove(selected,table.find(selected,opt))
-	            else
-	                table.insert(selected,opt)
-	            end
-	        else
-	            selected = {opt}
-	            btn.Text = opt
-	            toggleDropdown()
-	        end
-	        if data.Callback then pcall(data.Callback, selected) end
-	    end
-	
-	    for i,opt in ipairs(options) do
-	        local item = new("TextButton",{
-	            Parent = dropdownFrame,
-	            Size = UDim2.new(1,0,0,28),
-	            Text = opt,
-	            BackgroundColor3 = THEME.Button,
-	            TextColor3 = THEME.Text,
-	            Font = Enum.Font.Gotham,
-	            TextSize = 14
-	        })
-	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
-	        item.InputEnded:Connect(function(input, gameProcessedEvent)
-	            if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-	                selectOption(opt)
-	            end
-	        end)
-	    end
-	
-	    return {Get=function() return selected end}
-	end
+    data = data or {}
+    local name = data.Name or "Dropdown"
+    local options = data.Options or {}
+    if #options == 0 then return end
+    local multi = data.MultipleOptions or false
+    local selected = multi and {} or { options[1] }
+    local maxVisible = data.MaxVisibleOptions or 5
+
+    -- Main container (fixed height for button)
+    local container = new("Frame",{
+        Parent = tabPanel,
+        Size = UDim2.new(1,-20,0,36),
+        BackgroundColor3 = THEME.Button,
+        ClipsDescendants = true,
+        LayoutOrder = data.LayoutOrder or 0
+    })
+    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+
+    -- Label
+    local label = new("TextLabel",{
+        Parent = container,
+        Size = UDim2.new(0.7,0,1,0),
+        BackgroundTransparency = 1,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = THEME.Text,
+        Font = Enum.Font.Gotham,
+        TextSize = 14
+    })
+
+    -- Button (fixed)
+    local btn = new("TextButton",{
+        Parent = container,
+        Size = UDim2.new(0.3,-8,1,0),
+        Position = UDim2.new(0.7,4,0,0),
+        Text = selected[1] or "▼",
+        BackgroundTransparency = 1,
+        TextColor3 = THEME.Text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        ZIndex = 3
+    })
+
+    -- Dropdown frame (scrollable, separate from button)
+    local dropdownFrame = new("ScrollingFrame",{
+        Parent = container,
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,1,2),
+        BackgroundColor3 = THEME.Button,
+        ScrollBarThickness = 6,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
+    })
+    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
+    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+
+    local open = false
+
+    local function toggleDropdown()
+        open = not open
+        local totalHeight = #options * 28
+        local targetHeight = math.min(totalHeight, maxVisible * 28)
+        dropdownFrame:TweenSize(
+            UDim2.new(1,0,0,(open and targetHeight or 0)),
+            "Out","Quad",0.25,true
+        )
+    end
+
+    btn.InputEnded:Connect(function(input, gameProcessedEvent)
+        if not gameProcessedEvent and (input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch) then
+            toggleDropdown()
+        end
+    end)
+
+    local function selectOption(opt)
+        if multi then
+            if table.find(selected,opt) then
+                table.remove(selected,table.find(selected,opt))
+            else
+                table.insert(selected,opt)
+            end
+        else
+            selected = {opt}
+            btn.Text = opt
+            toggleDropdown()
+        end
+        if data.Callback then pcall(data.Callback, selected) end
+    end
+
+    for i,opt in ipairs(options) do
+        local item = new("TextButton",{
+            Parent = dropdownFrame,
+            Size = UDim2.new(1,0,0,28),
+            Text = opt,
+            BackgroundColor3 = THEME.Button,
+            TextColor3 = THEME.Text,
+            Font = Enum.Font.Gotham,
+            TextSize = 14
+        })
+        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
+        item.InputEnded:Connect(function(input, gameProcessedEvent)
+            if not gameProcessedEvent and (input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch) then
+                selectOption(opt)
+            end
+        end)
+    end
+
+    return {Get=function() return selected end}
+end
 	
 	---------------------------------------------------------------------------------------------
 	
