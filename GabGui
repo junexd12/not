@@ -159,7 +159,7 @@ function TabObj:CreateDropdown(data)
 	    local btn = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=selected[1] or "▼", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
 	
 	    -- Dropdown frame (inside UIListLayout)
-	    local dropdownFrame = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,0,0,0), BackgroundColor3=THEME.Button})
+	    local dropdownFrame = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,0,0,0), BackgroundColor3=THEME.Button, Visible = false})
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
 	
@@ -172,6 +172,7 @@ function TabObj:CreateDropdown(data)
 	        local targetHeight = math.min(totalHeight, maxVisible * 28)
 	        -- Tween size for smooth slide down/up
 	        dropdownFrame:TweenSize(open and UDim2.new(1,0,0,targetHeight) or UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
+	        dropdownFrame.Visible = open
 	    end
 	
 	    btn.MouseButton1Click:Connect(toggleDropdown)
@@ -199,6 +200,7 @@ function TabObj:CreateDropdown(data)
 	        Get = function() return selected end
 	    }
 	end
+	
 	
 	-- Keybind
 	function TabObj:CreateKeybind(data)
