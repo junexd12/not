@@ -11,7 +11,7 @@ local THEME = {
     Header = Color3.fromRGB(35,35,40),
     Accent = Color3.fromRGB(180,0,255),
     Button = Color3.fromRGB(40,40,50),
-    ToggleOn = Color3.fromRGB(80,200,120),
+    ToggleOn = Color3.fromRGB(180, 0, 255),
     ToggleOff = Color3.fromRGB(70,70,80),
     Text = Color3.fromRGB(235,235,235),
     Corner = 10,
@@ -146,95 +146,116 @@ function GabGui:CreateWindow(opts)
 	
 	-- Dropdown
 function TabObj:CreateDropdown(data)
-	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
-	    local maxVisible = data.MaxVisibleOptions or 5
-	    local selected = options[1]
-	
-	    -- Container inside tabPanel (UIListLayout will push other buttons)
-	    local container = new("Frame",{
-	        Parent=tabPanel,
-	        Size=UDim2.new(1,-20,0,36),
-	        BackgroundTransparency=1
-	    })
-	    new("UIListLayout",{Parent=container, SortOrder=Enum.SortOrder.LayoutOrder})
-	
-	    local mainBtn = new("TextButton",{
-	        Parent=container,
-	        Size=UDim2.new(1,0,0,36),
-	        Text="  "..name.." : "..selected,
-	        TextXAlignment=Enum.TextXAlignment.Left,
-	        BackgroundColor3=THEME.Button,
-	        TextColor3=THEME.Text,
-	        Font=Enum.Font.Gotham,
-	        TextSize=14
-	    })
-	    new("UICorner",{Parent=mainBtn, CornerRadius=UDim.new(0,8)})
-	
-	    -- Options scrolling frame
-	    local optionsFrame = new("ScrollingFrame",{
-	        Parent=container,
-	        Size=UDim2.new(1,0,0,0),
-	        BackgroundColor3=THEME.Button,
-	        ClipsDescendants=true,
-	        ScrollBarThickness=6,
-	        CanvasSize=UDim2.new(0,0,0,0)
-	    })
-	    local layout = new("UIListLayout",{Parent=optionsFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
-	
-	    for _,opt in ipairs(options) do
-	        local btn = new("TextButton",{
-	            Parent=optionsFrame,
-	            Size=UDim2.new(1,0,0,28),
-	            Text=opt,
-	            BackgroundColor3=THEME.Button,
-	            TextColor3=THEME.Text,
-	            Font=Enum.Font.Gotham,
-	            TextSize=14
-	        })
-	        new("UICorner",{Parent=btn, CornerRadius=UDim.new(0,6)})
-	
-	        btn.MouseButton1Click:Connect(function()
-	            selected = opt
-	            mainBtn.Text = "  "..name.." : "..opt
-	            toggleDropdown(false)
-	            if data.Callback then pcall(data.Callback,opt) end
-	        end)
-	    end
-	
-	    local open = false
-	    function toggleDropdown(state)
-	        open = state or not open
-	        local totalHeight = layout.AbsoluteContentSize.Y
-	        local targetHeight = open and math.min(totalHeight, maxVisible*28) or 0
-	        optionsFrame.CanvasSize = UDim2.new(0,0,0,totalHeight)
-	        TweenService:Create(optionsFrame, TweenInfo.new(0.25,Enum.EasingStyle.Quad), {Size=UDim2.new(1,0,0,targetHeight)}):Play()
-	        TweenService:Create(container, TweenInfo.new(0.25,Enum.EasingStyle.Quad), {Size=UDim2.new(1,-20,0,36+targetHeight)}):Play()
-	    end
-	
-	    mainBtn.MouseButton1Click:Connect(function()
-	        toggleDropdown()
-	    end)
-	
-	    return {Get=function() return selected end}
-	end
+    data = data or {}
+    local name = data.Name or "Dropdown"
+    local options = data.Options or {}
+    if #options == 0 then return end
+    local maxVisible = data.MaxVisibleOptions or 5
+    local selected = options[1]
+
+    -- Main container (UIListLayout will manage this)
+    local container = new("Frame",{
+        Parent=tabPanel,
+        Size=UDim2.new(1,-20,0,36),
+        BackgroundTransparency=1
+    })
+    new("UIListLayout",{Parent=container, SortOrder=Enum.SortOrder.LayoutOrder})
+
+    local mainBtn = new("TextButton",{
+        Parent=container,
+        Size=UDim2.new(1,0,1,0),
+        Text="  "..name.." : "..selected,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        BackgroundColor3=THEME.Button,
+        TextColor3=THEME.Text,
+        Font=Enum.Font.Gotham,
+        TextSize=14
+    })
+    new("UICorner",{Parent=mainBtn, CornerRadius=UDim.new(0,8)})
+
+    -- Options frame (parent directly to tabPanel, not container)
+    local optionsFrame = new("ScrollingFrame",{
+        Parent=tabPanel,
+        Size=UDim2.new(1,0,0,0),
+        Position=mainBtn.AbsolutePosition + Vector2.new(0, mainBtn.AbsoluteSize.Y),
+        BackgroundColor3=THEME.Button,
+        ClipsDescendants=true,
+        ScrollBarThickness=6,
+        CanvasSize=UDim2.new(0,0,0,0),
+        Visible=false
+    })
+    local layout = new("UIListLayout",{Parent=optionsFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+
+    -- Add options
+    for _,opt in ipairs(options) do
+        local btn = new("TextButton",{
+            Parent=optionsFrame,
+            Size=UDim2.new(1,0,0,28),
+            Text=opt,
+            BackgroundColor3=THEME.Button,
+            TextColor3=THEME.Text,
+            Font=Enum.Font.Gotham,
+            TextSize=14
+        })
+        new("UICorner",{Parent=btn, CornerRadius=UDim.new(0,6)})
+
+        btn.MouseButton1Click:Connect(function()
+            selected = opt
+            mainBtn.Text = "  "..name.." : "..opt
+            toggleDropdown(false)
+            if data.Callback then pcall(data.Callback,opt) end
+        end)
+    end
+
+    local open = false
+    function toggleDropdown(state)
+        open = state or not open
+        optionsFrame.Visible = open
+        if open then
+            local totalHeight = layout.AbsoluteContentSize.Y
+            local targetHeight = math.min(totalHeight, maxVisible*28)
+            optionsFrame.Size = UDim2.new(1,0,0,targetHeight)
+            optionsFrame.Position = UDim2.new(0, mainBtn.AbsolutePosition.X - tabPanel.AbsolutePosition.X, 0, mainBtn.AbsolutePosition.Y - tabPanel.AbsolutePosition.Y + mainBtn.AbsoluteSize.Y)
+        end
+    end
+
+    mainBtn.MouseButton1Click:Connect(function()
+        toggleDropdown()
+    end)
+
+    return {Get=function() return selected end}
+end
 	
 	
 	-- Keybind
-function TabObj:CreateKeybind(data)
+	function TabObj:CreateKeybind(data)
 	    data = data or {}
 	    local name = data.Name or "Keybind"
 	    local key = data.CurrentKeybind or "Q"
 	    local hold = data.HoldToInteract or false
 	
-	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
-	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+	    -- Container frame
+	    local container = new("Frame", {
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,36),
+	        BackgroundColor3 = THEME.Button
+	    })
+	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0,8)})
 	
-	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	    -- Label
+	    local label = new("TextLabel", {
+	        Parent = container,
+	        Size = UDim2.new(0.7,0,1,0),
+	        BackgroundTransparency = 1,
+	        Text = name,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        TextColor3 = THEME.Text,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14
+	    })
 	
-	    local keyBox = new("TextBox",{
+	    -- TextBox for typing key
+	    local keyBox = new("TextBox", {
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
@@ -251,7 +272,7 @@ function TabObj:CreateKeybind(data)
 	    -- When player types a key
 	    keyBox.FocusLost:Connect(function(enterPressed)
 	        local typed = keyBox.Text:upper()
-	        if #typed == 1 then -- only accept single letters
+	        if #typed == 1 then
 	            key = typed
 	            keyBox.Text = key
 	            if data.Callback then pcall(data.Callback, Enum.KeyCode[key]) end
@@ -297,40 +318,78 @@ function TabObj:CreateKeybind(data)
             return btn
         end
 
-        function TabObj:CreateToggle(data)
-            data = data or {}
-            local name = data.Name or "Toggle"
-            local start = data.CurrentValue or false
-            local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
-            new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-            local label = new("TextLabel",{Parent=container, Position=UDim2.new(0,8,0,0), Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-            local switch = new("Frame",{Parent=container, Size=UDim2.new(0,46,0,24), Position=UDim2.new(1,-56,0.5,-12), BackgroundColor3=THEME.ToggleOff})
-            new("UICorner",{Parent=switch, CornerRadius=UDim.new(1,0)})
-            local knob = new("Frame",{Parent=switch, Size=UDim2.new(0,20,0,20), Position=UDim2.new(0,2,0,2), BackgroundColor3=Color3.fromRGB(240,240,240)})
-            new("UICorner",{Parent=knob, CornerRadius=UDim.new(1,0)})
-
-            local state = start
-            local function setState(s, noCb)
-                state = s
-                local toPos = s and UDim2.new(1,-22,0,2) or UDim2.new(0,2,0,2)
-                local bgCol = s and THEME.ToggleOn or THEME.ToggleOff
-                TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quad), {Position=toPos}):Play()
-                TweenService:Create(switch, TweenInfo.new(0.22), {BackgroundColor3=bgCol}):Play()
-                if not noCb and data.Callback then pcall(data.Callback,state) end
-            end
-
-            switch.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                    setState(not state)
-                end
-            end)
-            setState(state,true)
-            return {
-                Set=function(_,v) setState(v) end,
-                Get=function() return state end
-            }
-        end
-
+-- Paragraph with automatic height based on content
+	function TabObj:CreateParagraph(data)
+	    data = data or {}
+	    local title = data.Title or ""
+	    local content = data.Content or ""
+	
+	    local container = new("Frame",{
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0), -- start with 0, auto adjust
+	        BackgroundTransparency = 1
+	    })
+	    local layout = new("UIListLayout",{
+	        Parent = container,
+	        SortOrder = Enum.SortOrder.LayoutOrder,
+	        Padding = UDim.new(0,4)
+	    })
+	
+	    local titleLbl = new("TextLabel",{
+	        Parent = container,
+	        Text = title,
+	        Font = Enum.Font.GothamBold,
+	        TextSize = 14,
+	        TextColor3 = THEME.Text,
+	        BackgroundTransparency = 1,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        TextWrapped = true,
+	        Size = UDim2.new(1,0,0,0), -- auto sizing
+	        AutomaticSize = Enum.AutomaticSize.Y
+	    })
+	
+	    local contentLbl = new("TextLabel",{
+	        Parent = container,
+	        Text = content,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        TextColor3 = THEME.Text,
+	        BackgroundTransparency = 1,
+	        TextWrapped = true,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        Size = UDim2.new(1,0,0,0), -- auto sizing
+	        AutomaticSize = Enum.AutomaticSize.Y
+	    })
+	
+	    -- Update container size based on content
+	    container:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	        container.Size = UDim2.new(1,-20,0,container.LayoutOrder + layout.AbsoluteContentSize.Y)
+	    end)
+	
+	    return container
+	end
+	
+	-- Button with automatic height based on text
+	function TabObj:CreateButton(data)
+	    local btn = new("TextButton",{
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0),
+	        BackgroundColor3 = THEME.Button,
+	        Text = "  "..(data.Name or "Button"),
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        TextWrapped = true,
+	        AutomaticSize = Enum.AutomaticSize.Y,
+	        TextColor3 = THEME.Text
+	    })
+	    new("UICorner",{Parent=btn, CornerRadius=UDim.new(0,8)})
+	
+	    btn.MouseButton1Click:Connect(function() pcall(data.Callback) end)
+	
+	    return btn
+	end
+	
         function TabObj:CreateSlider(data)
             data = data or {}
             local name = data.Name or "Slider"
@@ -393,3 +452,37 @@ function TabObj:CreateKeybind(data)
 end
 
 return GabGui
+
+-- ===============================
+-- Separate draggable toggle button (spawns automatically)
+-- ===============================
+do
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0,40,0,40)
+    toggleBtn.Position = UDim2.new(0.95, -40, 0.5, -20)
+    toggleBtn.BackgroundColor3 = THEME.Accent
+    toggleBtn.Text = "☰"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 22
+    toggleBtn.TextColor3 = THEME.Text
+    toggleBtn.ZIndex = 1000
+    toggleBtn.AutoButtonColor = true
+    toggleBtn.Parent = PlayerGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1,0)
+    corner.Parent = toggleBtn
+
+    toggleBtn.Active = true
+    toggleBtn.Draggable = true
+
+    toggleBtn.MouseButton1Click:Connect(function()
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui.Name:match("^GabGui_") then
+            local mainFrame = gui:FindFirstChildWhichIsA("Frame")
+            if mainFrame then
+                mainFrame.Visible = not mainFrame.Visible
+            end
+        end
+    end
+end)
