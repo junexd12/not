@@ -55,28 +55,6 @@ function GabGui:CreateWindow(opts)
     local pos = opts.Position or UDim2.new(0.5, -size.X.Offset/2, 0.5, -size.Y.Offset/2)
     local ScreenGui = new("ScreenGui",{Parent=PlayerGui, ResetOnSpawn=false, Name="GabGui_"..tostring(name)})
     ScreenGui.IgnoreGuiInset = true
-    
-    local success, RobloxSettings = pcall(function()
-	    return game:GetService("CoreGui"):WaitForChild("RobloxGui"):WaitForChild("Settings"):WaitForChild("Menu")
-	end)
-	
-	if success and RobloxSettings then
-	    local toggleBtn = new("TextButton", {
-	        Parent = RobloxSettings,
-	        Size = UDim2.new(1,0,0,36),
-	        BackgroundColor3 = Color3.fromRGB(50,50,50),
-	        TextColor3 = Color3.fromRGB(255,255,255),
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14,
-	        Text = "GabGui: Visible ✅"
-	    })
-	    local visible = true
-	    toggleBtn.MouseButton1Click:Connect(function()
-	        visible = not visible
-	        ScreenGui.Enabled = visible
-	        toggleBtn.Text = "GabGui: Visible " .. (visible and "✅" or "❌")
-	    end)
-	end
 
     local frame = new("Frame",{Parent=ScreenGui, Size=size, Position=pos, BackgroundColor3=THEME.Background, BorderSizePixel=0})
     frame.Active = true
@@ -430,38 +408,30 @@ function TabObj:CreateDropdown(data)
     return WindowObj
 end
 
--- Create a parent ScreenGui
-local toggleGui = Instance.new("ScreenGui")
-toggleGui.Name = "GabGuiToggle"
-toggleGui.ResetOnSpawn = false
-toggleGui.Parent = PlayerGui
-toggleGui.IgnoreGuiInset = true
+-- At the end of your GabGui module (before `return GabGui`)
 
--- Small draggable toggle button 🔘
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0,36,0,36)
-toggleBtn.Position = UDim2.new(1,-50,0,50)
-toggleBtn.BackgroundColor3 = THEME.Accent
-toggleBtn.Text = "🔘"
-toggleBtn.TextScaled = true
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-toggleBtn.Parent = toggleGui
-toggleBtn.AutoButtonColor = false
-toggleBtn.ZIndex = 999
-toggleBtn.Active = true
-toggleBtn.Draggable = true  -- ✅ Works inside ScreenGui
+-- Floating icon
+do
+    local iconGui = Instance.new("ScreenGui")
+    iconGui.Name = "GabGui_FloatingIcon"
+    iconGui.ResetOnSpawn = false
+    iconGui.Parent = PlayerGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1,0)
-corner.Parent = toggleBtn
+    local icon = Instance.new("TextButton")
+    icon.Size = UDim2.new(0, 36, 0, 36)
+    icon.Position = UDim2.new(0.5, -18, 0, 10) -- top middle
+    icon.BackgroundColor3 = Color3.fromRGB(180, 0, 255),
+    icon.TextColor3 = Color3.new(1,1,1)
+    icon.Text = ""
+    icon.Font = Enum.Font.GothamBold
+    icon.TextSize = 20
+    icon.Parent = iconGui
+    icon.AutoButtonColor = true
+    icon.AnchorPoint = Vector2.new(0.5,0)
 
--- Toggle GabGui window visibility
-toggleBtn.MouseButton1Click:Connect(function()
-    for _, gui in ipairs(PlayerGui:GetChildren()) do
-        if gui.Name:match("GabGui_") then
-            gui.Enabled = not gui.Enabled
-        end
-    end
-end)
+    local corner = Instance.new("UICorner")
+    corner.Parent = icon
+    corner.CornerRadius = UDim.new(1,0)
+end
+
 return GabGui
