@@ -145,32 +145,27 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
--- Dropdown (scrollable, shows current selection)
-	function TabObj:CreateDropdown(data)
+function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
 	    local multi = data.MultipleOptions or false
 	    local selected = multi and {} or {options[1]}
 	
+	    -- Container inside tab panel (stacked with other buttons)
 	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	    local btn = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=selected[1] or "▼", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
 	
-	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = container,
-	        Size = UDim2.new(1,0,0,0),
-	        Position = UDim2.new(0,0,1,2),
-	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        ClipsDescendants = true
-	    })
+	    -- Dropdown frame inside container (stacked vertically in UIListLayout)
+	    local dropdownFrame = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,0), BackgroundColor3=THEME.Button})
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
 	
 	    local open = false
-	    local maxVisible = 5 -- max number of items to show before scrolling
+	    local maxVisible = 5
+	
 	    local function toggleDropdown()
 	        open = not open
 	        local totalHeight = #options*28
@@ -191,7 +186,7 @@ function GabGui:CreateWindow(opts)
 	                end
 	            else
 	                selected = {opt}
-	                btn.Text = opt -- show current selected
+	                btn.Text = opt
 	                toggleDropdown()
 	            end
 	            if data.Callback then pcall(data.Callback, selected) end
