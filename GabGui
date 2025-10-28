@@ -79,12 +79,23 @@ function GabGui:CreateWindow(opts)
     closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
 
     -- Top tab bar (horizontal scroll)
-    local tabBar = new("ScrollingFrame", {Parent = frame, Size = UDim2.new(1,-10,0,36), Position = UDim2.new(0,5,0,38), BackgroundTransparency = 1, ScrollBarThickness = 6})
-    tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-    local tabList = new("UIListLayout", {Parent = tabBar})
-    tabList.FillDirection = Enum.FillDirection.Horizontal
-    tabList.Padding = UDim.new(0,6)
-    tabList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	local tabBar = new("ScrollingFrame", {
+	    Parent = frame,
+	    Size = UDim2.new(1,-10,0,36),
+	    Position = UDim2.new(0,5,0,38),
+	    BackgroundTransparency = 1,
+	    ScrollBarThickness = 6,
+	    CanvasSize = UDim2.new(0,0,0,0),
+	    ScrollingDirection = Enum.ScrollingDirection.X
+	})
+	tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+	tabBar.ScrollBarImageColor3 = THEME.Accent
+	tabBar.ScrollBarImageTransparency = 0.5
+	
+	local tabList = new("UIListLayout", {Parent = tabBar})
+	tabList.FillDirection = Enum.FillDirection.Horizontal
+	tabList.Padding = UDim.new(0,6)
+	tabList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 
     -- Content area
     local contentHolder = new("Frame", {Parent = frame, Size = UDim2.new(1,-10,1,-84), Position = UDim2.new(0,5,0,78), BackgroundTransparency = 1})
