@@ -447,37 +447,3 @@ function TabObj:CreateDropdown(data)
 end
 
 return GabGui
-
-local function ToggleGui()
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0,40,0,40)
-    toggleBtn.Position = UDim2.new(0.95, -40, 0.5, -20)
-    toggleBtn.BackgroundColor3 = THEME.Accent
-    toggleBtn.Text = "☰"
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 22
-    toggleBtn.TextColor3 = THEME.Text
-    toggleBtn.ZIndex = 1000
-    toggleBtn.AutoButtonColor = true
-    toggleBtn.Parent = PlayerGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1,0)
-    corner.Parent = toggleBtn
-
-    toggleBtn.Active = true
-    toggleBtn.Draggable = true
-
-    toggleBtn.MouseButton1Click:Connect(function()
-    for _, gui in ipairs(PlayerGui:GetChildren()) do
-        if gui.Name:match("^GabGui_") then
-            local mainFrame = gui:FindFirstChildWhichIsA("Frame")
-            if mainFrame then
-                mainFrame.Visible = not mainFrame.Visible
-            end
-        end
-    end
-end)
-end
-ToggleGui()
-
