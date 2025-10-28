@@ -472,11 +472,12 @@ do
     toggleBtn.Draggable = true
 
     toggleBtn.MouseButton1Click:Connect(function()
-        -- Toggle all GabGui windows
-        for _, gui in ipairs(PlayerGui:GetChildren()) do
-            if gui.Name:match("^GabGui_") then
-                gui.Enabled = not gui.Enabled
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui.Name:match("^GabGui_") then
+            local mainFrame = gui:FindFirstChildWhichIsA("Frame")
+            if mainFrame then
+                mainFrame.Visible = not mainFrame.Visible
             end
         end
-    end)
-end
+    end
+end)
