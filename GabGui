@@ -386,65 +386,56 @@ function TabObj:CreateDropdown(data)
 	end
 	
 		function TabObj:CreateSlider(data)
-		    data = data or {}
-		    local name = data.Name or "Slider"
-		    local min,max = (data.Range and data.Range[1]) or 0, (data.Range and data.Range[2]) or 100
-		    local inc = data.Increment or 1
-		    local cur = data.CurrentValue or min
-		    local suffix = data.Suffix or ""
-		    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,48), BackgroundTransparency=1})
-		    local label = new("TextLabel",{Parent=container, Size=UDim2.new(1,0,0,18), Position=UDim2.new(0,0,0,0), BackgroundTransparency=1, Text=name.." : "..tostring(cur)..(suffix~="" and " "..suffix or ""), TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
-		    local track = new("Frame",{Parent=container, Size=UDim2.new(1,-40,0,18), Position=UDim2.new(0,16,0,24), BackgroundColor3=Color3.fromRGB(60,60,70)})
-		    new("UICorner",{Parent=track, CornerRadius=UDim.new(0,8)})
-		    local fill = new("Frame",{Parent=track, Size=UDim2.new((cur-min)/(max-min),0,1,0), BackgroundColor3=THEME.Accent})
-		    new("UICorner",{Parent=fill, CornerRadius=UDim.new(0,8)})
-		
-		    local dragging = false
-		    local function setFromX(x)
-		        local rel = math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
-		        local raw = min+rel*(max-min)
-		        local stepped = math.floor((raw-min)/inc+0.5)*inc+min
-		        stepped = math.clamp(stepped,min,max)
-		        cur = stepped
-		        fill.Size=UDim2.new((stepped-min)/(max-min),0,1,0)
-		        label.Text = name.." : "..tostring(stepped)..(suffix~="" and " "..suffix or "")
-		        if data.Callback then pcall(data.Callback,stepped) end
-		    end
-		
-		    track.InputBegan:Connect(function(i)
-		        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-		            dragging=true
-		            setFromX(i.Position.X)
-		        end
-		    end)
-		    track.InputEnded:Connect(function(i)
-		        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-		            dragging=false
-		        end
-		    end)
-		    UserInputService.InputChanged:Connect(function(i)
-		        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
-		            setFromX(i.Position.X)
-		        end
-		    end)
-		
-		    return {
-		        Set=function(_,v)
-		            if type(v)=="number" then
-		                setFromX(track.AbsolutePosition.X + (v-min)/(max-min)*track.AbsoluteSize.X)
-		            end
-		        end,
-		        CurrentValue=function(val)
-		            if val then
-		                -- setter
-		                setFromX(track.AbsolutePosition.X + (val-min)/(max-min)*track.AbsoluteSize.X)
-		            else
-		                -- getter
-		                return cur
-		            end
-		        end
-		    }
-		end
+    data = data or {}
+    local name = data.Name or "Slider"
+    local min,max = (data.Range and data.Range[1]) or 0, (data.Range and data.Range[2]) or 100
+    local inc = data.Increment or 1
+    local cur = data.CurrentValue or min
+    local suffix = data.Suffix or ""
+    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,48), BackgroundTransparency=1})
+    local label = new("TextLabel",{Parent=container, Size=UDim2.new(1,0,0,18), Position=UDim2.new(0,0,0,0), BackgroundTransparency=1, Text=name.." : "..tostring(cur)..(suffix~="" and " "..suffix or ""), TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
+    local track = new("Frame",{Parent=container, Size=UDim2.new(1,-40,0,18), Position=UDim2.new(0,16,0,24), BackgroundColor3=Color3.fromRGB(60,60,70)})
+    new("UICorner",{Parent=track, CornerRadius=UDim.new(0,8)})
+    local fill = new("Frame",{Parent=track, Size=UDim2.new((cur-min)/(max-min),0,1,0), BackgroundColor3=THEME.Accent})
+    new("UICorner",{Parent=fill, CornerRadius=UDim.new(0,8)})
+
+    local dragging = false
+    local function setFromX(x)
+        local rel = math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+        local raw = min+rel*(max-min)
+        local stepped = math.floor((raw-min)/inc+0.5)*inc+min
+        stepped = math.clamp(stepped,min,max)
+        cur = stepped
+        fill.Size=UDim2.new((stepped-min)/(max-min),0,1,0)
+        label.Text = name.." : "..tostring(stepped)..(suffix~="" and " "..suffix or "")
+        if data.Callback then pcall(data.Callback,stepped) end
+    end
+
+    track.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            dragging=true
+            setFromX(i.Position.X)
+        end
+    end)
+    track.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            dragging=false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+            setFromX(i.Position.X)
+        end
+    end)
+
+    return {
+        Set=function(_,v)
+            if type(v)=="number" then
+                setFromX(track.AbsolutePosition.X + (v-min)/(max-min)*track.AbsoluteSize.X)
+            end
+        end
+    }
+end
 
         -- You can implement other CreateInput, CreateDropdown, CreateKeybind, CreateLabel, CreateParagraph similarly...
 
