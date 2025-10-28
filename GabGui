@@ -313,40 +313,78 @@ function TabObj:CreateDropdown(data)
             return btn
         end
 
-        function TabObj:CreateToggle(data)
-            data = data or {}
-            local name = data.Name or "Toggle"
-            local start = data.CurrentValue or false
-            local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
-            new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-            local label = new("TextLabel",{Parent=container, Position=UDim2.new(0,8,0,0), Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-            local switch = new("Frame",{Parent=container, Size=UDim2.new(0,46,0,24), Position=UDim2.new(1,-56,0.5,-12), BackgroundColor3=THEME.ToggleOff})
-            new("UICorner",{Parent=switch, CornerRadius=UDim.new(1,0)})
-            local knob = new("Frame",{Parent=switch, Size=UDim2.new(0,20,0,20), Position=UDim2.new(0,2,0,2), BackgroundColor3=Color3.fromRGB(240,240,240)})
-            new("UICorner",{Parent=knob, CornerRadius=UDim.new(1,0)})
-
-            local state = start
-            local function setState(s, noCb)
-                state = s
-                local toPos = s and UDim2.new(1,-22,0,2) or UDim2.new(0,2,0,2)
-                local bgCol = s and THEME.ToggleOn or THEME.ToggleOff
-                TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quad), {Position=toPos}):Play()
-                TweenService:Create(switch, TweenInfo.new(0.22), {BackgroundColor3=bgCol}):Play()
-                if not noCb and data.Callback then pcall(data.Callback,state) end
-            end
-
-            switch.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                    setState(not state)
-                end
-            end)
-            setState(state,true)
-            return {
-                Set=function(_,v) setState(v) end,
-                Get=function() return state end
-            }
-        end
-
+-- Paragraph with automatic height based on content
+	function TabObj:CreateParagraph(data)
+	    data = data or {}
+	    local title = data.Title or ""
+	    local content = data.Content or ""
+	
+	    local container = new("Frame",{
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0), -- start with 0, auto adjust
+	        BackgroundTransparency = 1
+	    })
+	    local layout = new("UIListLayout",{
+	        Parent = container,
+	        SortOrder = Enum.SortOrder.LayoutOrder,
+	        Padding = UDim.new(0,4)
+	    })
+	
+	    local titleLbl = new("TextLabel",{
+	        Parent = container,
+	        Text = title,
+	        Font = Enum.Font.GothamBold,
+	        TextSize = 14,
+	        TextColor3 = THEME.Text,
+	        BackgroundTransparency = 1,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        TextWrapped = true,
+	        Size = UDim2.new(1,0,0,0), -- auto sizing
+	        AutomaticSize = Enum.AutomaticSize.Y
+	    })
+	
+	    local contentLbl = new("TextLabel",{
+	        Parent = container,
+	        Text = content,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        TextColor3 = THEME.Text,
+	        BackgroundTransparency = 1,
+	        TextWrapped = true,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        Size = UDim2.new(1,0,0,0), -- auto sizing
+	        AutomaticSize = Enum.AutomaticSize.Y
+	    })
+	
+	    -- Update container size based on content
+	    container:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	        container.Size = UDim2.new(1,-20,0,container.LayoutOrder + layout.AbsoluteContentSize.Y)
+	    end)
+	
+	    return container
+	end
+	
+	-- Button with automatic height based on text
+	function TabObj:CreateButton(data)
+	    local btn = new("TextButton",{
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0),
+	        BackgroundColor3 = THEME.Button,
+	        Text = "  "..(data.Name or "Button"),
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        TextWrapped = true,
+	        AutomaticSize = Enum.AutomaticSize.Y,
+	        TextColor3 = THEME.Text
+	    })
+	    new("UICorner",{Parent=btn, CornerRadius=UDim.new(0,8)})
+	
+	    btn.MouseButton1Click:Connect(function() pcall(data.Callback) end)
+	
+	    return btn
+	end
+	
         function TabObj:CreateSlider(data)
             data = data or {}
             local name = data.Name or "Slider"
