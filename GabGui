@@ -11,7 +11,7 @@ local THEME = {
     Header = Color3.fromRGB(35,35,40),
     Accent = Color3.fromRGB(180,0,255),
     Button = Color3.fromRGB(40,40,50),
-    ToggleOn = Color3.fromRGB(180, 0, 255),
+    ToggleOn = Color3.fromRGB(80,200,120),
     ToggleOff = Color3.fromRGB(70,70,80),
     Text = Color3.fromRGB(235,235,235),
     Corner = 10,
@@ -223,34 +223,18 @@ function TabObj:CreateDropdown(data)
 	
 	
 	-- Keybind
-	function TabObj:CreateKeybind(data)
+function TabObj:CreateKeybind(data)
 	    data = data or {}
 	    local name = data.Name or "Keybind"
 	    local key = data.CurrentKeybind or "Q"
 	    local hold = data.HoldToInteract or false
 	
-	    -- Container frame
-	    local container = new("Frame", {
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button
-	    })
-	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0,8)})
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
+	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
-	    -- Label
-	    local label = new("TextLabel", {
-	        Parent = container,
-	        Size = UDim2.new(0.7,0,1,0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextXAlignment = Enum.TextXAlignment.Left,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14
-	    })
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	
-	    -- TextBox for typing key
-	    local keyBox = new("TextBox", {
+	    local keyBox = new("TextBox",{
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
@@ -267,7 +251,7 @@ function TabObj:CreateDropdown(data)
 	    -- When player types a key
 	    keyBox.FocusLost:Connect(function(enterPressed)
 	        local typed = keyBox.Text:upper()
-	        if #typed == 1 then
+	        if #typed == 1 then -- only accept single letters
 	            key = typed
 	            keyBox.Text = key
 	            if data.Callback then pcall(data.Callback, Enum.KeyCode[key]) end
