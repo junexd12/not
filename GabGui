@@ -145,28 +145,27 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
--- Dropdown (FIXED: Hidden options + input reliability)
-	function TabObj:CreateDropdown(data)
+function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
-	    if #options == 0 then return end -- Block empty dropdowns
+	    if #options == 0 then return end
 	    local multi = data.MultipleOptions or false
 	    local selected = multi and {} or { options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Main container (pushes other buttons via LayoutOrder + height tween)
+	    -- Main container
 	    local container = new("Frame",{
 	        Parent=tabPanel,
-	        Size=UDim2.new(1,-20,0,36), -- Initial button height
+	        Size=UDim2.new(1,-20,0,36),
 	        BackgroundColor3=THEME.Button,
 	        ClipsDescendants = false,
-	        LayoutOrder = data.LayoutOrder or 0 -- Critical for UI shifting
+	        LayoutOrder = data.LayoutOrder or 0
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-	    
-	    -- Single-input trigger button (mobile + PC)
+	
+	    -- Dropdown button (stop dragging the window!)
 	    local btn = new("TextButton",{
 	        Parent=container,
 	        Size=UDim2.new(0.3,-8,1,0),
@@ -178,34 +177,41 @@ function GabGui:CreateWindow(opts)
 	        TextSize=14,
 	        ZIndex=3,
 	        Active=true,
-	        CaptureMouse=true,
-	        CaptureTouch=true
+	        AutoButtonColor=false
 	    })
+	    -- Prevent dragging the main window when clicking dropdown
+	    btn.InputBegan:Connect(function(input)
+	        input.Changed:Connect(function()
+	            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+	                UserInputService.InputBegan:Wait()
+	            end
+	        end)
+	    end)
 	
-	    -- Dropdown frame (fixed options visibility)
+	    -- Dropdown frame
 	    local dropdownFrame = new("ScrollingFrame",{
 	        Parent=container,
 	        Size=UDim2.new(1,0,0,0),
-	        Position=UDim2.new(0,0,1,2), -- Attaches to button
+	        Position=UDim2.new(0,0,1,2),
 	        BackgroundColor3=THEME.Button,
 	        Visible=false,
 	        ScrollBarThickness=6,
 	        ScrollingDirection=Enum.ScrollingDirection.Y,
-	        ZIndex=2,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y -- FIX: Makes options appear
+	        ZIndex=10,
+	        ClipsDescendants=false,
+	        AutomaticCanvasSize=Enum.AutomaticSize.Y
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
 	
 	    local open = false
 	
-	    -- Toggle logic (expands container + shows options)
 	    local function toggleDropdown()
 	        open = not open
 	        local totalHeight = #options * 28
 	        local targetHeight = math.min(totalHeight, maxVisible * 28)
-	        
-	        -- Tween container height to push other buttons down
+	        dropdownFrame.Visible = open
+	        dropdownFrame.CanvasSize = UDim2.new(0,0,0,totalHeight)
 	        container:TweenSize(
 	            open and UDim2.new(1,-20,0,36 + targetHeight + 2) or UDim2.new(1,-20,0,36),
 	            "Out",
@@ -213,18 +219,10 @@ function GabGui:CreateWindow(opts)
 	            0.25,
 	            true
 	        )
-	        dropdownFrame.Visible = open
-		    dropdownFrame.CanvasSize = UDim2.new(1, 0, 0, targetHeight)
 	    end
 	
-	    -- Single input connection (mobile touch + PC mouse)
-	    btn.InputEnded:Connect(function(input, gameProcessedEvent)
-	        if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-	            toggleDropdown()
-	        end
-	    end)
+	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Option selection (single input + fixes hidden options)
 	    local function selectOption(opt)
 	        if multi then
 	            if table.find(selected,opt) then
@@ -241,18 +239,24 @@ function GabGui:CreateWindow(opts)
 	    end
 	
 	    for i,opt in ipairs(options) do
-	        local item = new("TextButton",{Parent=dropdownFrame, Size=UDim2.new(1,0,0,28), Text=opt, BackgroundColor3=THEME.Button, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	        local item = new("TextButton",{
+	            Parent=dropdownFrame,
+	            Size=UDim2.new(1,0,0,28),
+	            Text=opt,
+	            BackgroundColor3=THEME.Button,
+	            TextColor3=THEME.Text,
+	            Font=Enum.Font.Gotham,
+	            TextSize=14,
+	            ZIndex=11
+	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
-	        item.InputEnded:Connect(function(input, gameProcessedEvent)
-	            if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-	                selectOption(opt)
-	            end
+	        item.MouseButton1Click:Connect(function()
+	            selectOption(opt)
 	        end)
 	    end
 	
-	    return {Get = function() return selected end}
+	    return {Get=function() return selected end}
 	end
-	
 	
 	
 	-- Keybind
