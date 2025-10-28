@@ -223,7 +223,7 @@ function TabObj:CreateDropdown(data)
 	
 	
 	-- Keybind
-	function TabObj:CreateKeybind(data)
+function TabObj:CreateKeybind(data)
 	    data = data or {}
 	    local name = data.Name or "Keybind"
 	    local key = data.CurrentKeybind or "Q"
@@ -231,35 +231,46 @@ function TabObj:CreateDropdown(data)
 	
 	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-	    local keyLabel = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=key, BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
 	
-	    keyLabel.MouseButton1Click:Connect(function()
-	        keyLabel.Text = "..."
-	        local conn
-	        conn = UserInputService.InputBegan:Connect(function(i,gpe)
-	            if not gpe and i.UserInputType==Enum.UserInputType.Keyboard then
-	                key = i.KeyCode.Name
-	                keyLabel.Text = key
-	                if data.Callback then pcall(data.Callback,i.KeyCode) end
-	                conn:Disconnect()
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	
+	    -- Use TextBox instead of TextButton
+	    local keyBox = new("TextBox",{
+	        Parent = container,
+	        Size = UDim2.new(0.3,-8,1,0),
+	        Position = UDim2.new(0.7,4,0,0),
+	        Text = key,
+	        BackgroundTransparency = 0.5,
+	        TextColor3 = THEME.Text,
+	        Font = Enum.Font.GothamBold,
+	        TextSize = 14,
+	        ClearTextOnFocus = true
+	    })
+	    new("UICorner",{Parent=keyBox, CornerRadius=UDim.new(0,6)})
+	
+	    keyBox.FocusLost:Connect(function(enterPressed)
+	        if enterPressed then
+	            local newKey = keyBox.Text:upper():sub(1,1) -- just take first character
+	            if newKey ~= "" then
+	                key = newKey
+	                keyBox.Text = key
+	                if data.Callback then pcall(data.Callback, key) end
+	            else
+	                keyBox.Text = key -- revert if nothing typed
 	            end
-	        end)
+	        end
 	    end)
 	
-	    if hold then
-	        UserInputService.InputBegan:Connect(function(i,gpe)
-	            if i.KeyCode.Name==key and not gpe then if data.Callback then pcall(data.Callback,i.KeyCode) end end
-	        end)
-	    else
-	        UserInputService.InputBegan:Connect(function(i,gpe)
-	            if i.KeyCode.Name==key and not gpe then if data.Callback then pcall(data.Callback,i.KeyCode) end end
-	        end)
-	    end
+	    -- Detect key presses for hold/normal
+	    UserInputService.InputBegan:Connect(function(input, gpe)
+	        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == key and not gpe then
+	            if data.Callback then pcall(data.Callback, input.KeyCode) end
+	        end
+	    end)
 	
 	    return {
-	        Get=function() return key end,
-	        Set=function(_,v) key=v; keyLabel.Text=v end
+	        Get = function() return key end,
+	        Set = function(_,v) key=v; keyBox.Text=v end
 	    }
 	end
 	
