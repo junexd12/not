@@ -146,118 +146,107 @@ function GabGui:CreateWindow(opts)
 	
 	-- Dropdown
 function TabObj:CreateDropdown(data)
-	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
-	    local multi = data.MultipleOptions or false
-	    local selected = multi and {} or { options[1] }
-	    local maxVisible = data.MaxVisibleOptions or 5
+		data = data or {}
+		local name = data.Name or "Dropdown"
+		local options = data.Options or {}
+		if #options == 0 then return end
+		local multi = data.MultipleOptions or false
+		local selected = multi and {} or { options[1] }
+		local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Main button container
-	    local container = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button,
-	        LayoutOrder = data.LayoutOrder or 0
-	    })
-	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+		local container = new("Frame", {
+			Parent = tabPanel,
+			Size = UDim2.new(1,-20,0,36),
+			BackgroundColor3 = THEME.Button,
+			LayoutOrder = data.LayoutOrder or 0
+		})
+		new("UICorner",{Parent=container,CornerRadius=UDim.new(0,8)})
 	
-	    -- Label
-	    local label = new("TextLabel",{
-	        Parent = container,
-	        Size = UDim2.new(0.7,0,1,0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextXAlignment = Enum.TextXAlignment.Left,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14
-	    })
+		local label = new("TextLabel",{
+			Parent = container,
+			Size = UDim2.new(0.7,0,1,0),
+			BackgroundTransparency = 1,
+			Text = name,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.Gotham,
+			TextSize = 14
+		})
 	
-	    -- Button
-	    local btn = new("TextButton",{
-	        Parent = container,
-	        Size = UDim2.new(0.3,-8,1,0),
-	        Position = UDim2.new(0.7,4,0,0),
-	        Text = selected[1] or "▼",
-	        BackgroundTransparency = 1,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.GothamBold,
-	        TextSize = 14
-	    })
+		local btn = new("TextButton",{
+			Parent = container,
+			Size = UDim2.new(0.3,-8,1,0),
+			Position = UDim2.new(0.7,4,0,0),
+			Text = selected[1] or "▼",
+			BackgroundTransparency = 1,
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.GothamBold,
+			TextSize = 14
+		})
 	
-	    -- Dropdown frame (parented to PlayerGui, so it floats above everything)
-	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = PlayerGui,
-	        Size = UDim2.new(0, container.AbsoluteSize.X, 0, 0),
-	        Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y),
-	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        ScrollingDirection = Enum.ScrollingDirection.Y,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ZIndex = 5,
-	        Visible = false
-	    })
-	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+		local dropdownFrame = new("ScrollingFrame",{
+			Parent = container,
+			Size = UDim2.new(1,0,0,0),
+			Position = UDim2.new(0,0,1,2),
+			BackgroundColor3 = THEME.Button,
+			ScrollBarThickness = 4,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ClipsDescendants = true
+		})
+		new("UICorner",{Parent=dropdownFrame,CornerRadius=UDim.new(0,8)})
+		local layout = new("UIListLayout",{Parent=dropdownFrame,Padding=UDim.new(0,2)})
 	
-	    local open = false
+		local open = false
+		local function toggleDropdown()
+			open = not open
+			local targetHeight = open and math.min(#options*28, maxVisible*28) or 0
+			-- Tween container height to push buttons below
+			container:TweenSize(
+				UDim2.new(1,-20,0,36 + targetHeight + (open and 2 or 0)),
+				"Out",
+				"Quad",
+				0.25,
+				true
+			)
+			dropdownFrame.Visible = true
+			TweenService:Create(dropdownFrame,TweenInfo.new(0.25, Enum.EasingStyle.Quad),{Size=UDim2.new(1,0,0,targetHeight)}):Play()
+			task.delay(open and 0 or 0.25, function()
+				if not open then dropdownFrame.Visible = false end
+			end)
+		end
 	
-	    local function toggleDropdown()
-	        open = not open
-	        local totalHeight = #options * 28
-	        local targetHeight = math.min(totalHeight, maxVisible * 28)
-	        dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
-	        dropdownFrame.Visible = true
-	        dropdownFrame:TweenSize(
-	            UDim2.new(0, container.AbsoluteSize.X, 0, open and targetHeight or 0),
-	            "Out","Quad",0.25,true,
-	            function()
-	                if not open then dropdownFrame.Visible = false end
-	            end
-	        )
-	    end
+		btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    btn.MouseButton1Click:Connect(toggleDropdown)
+		local function selectOption(opt)
+			if multi then
+				if table.find(selected,opt) then
+					table.remove(selected,table.find(selected,opt))
+				else
+					table.insert(selected,opt)
+				end
+			else
+				selected = {opt}
+				btn.Text = opt
+				toggleDropdown()
+			end
+			if data.Callback then pcall(data.Callback,selected) end
+		end
 	
-	    local function selectOption(opt)
-	        if multi then
-	            if table.find(selected,opt) then
-	                table.remove(selected,table.find(selected,opt))
-	            else
-	                table.insert(selected,opt)
-	            end
-	        else
-	            selected = {opt}
-	            btn.Text = opt
-	            toggleDropdown()
-	        end
-	        if data.Callback then pcall(data.Callback, selected) end
-	    end
+		for _,opt in ipairs(options) do
+			local item = new("TextButton",{
+				Parent = dropdownFrame,
+				Size = UDim2.new(1,0,0,28),
+				Text = opt,
+				BackgroundColor3 = THEME.Button,
+				TextColor3 = THEME.Text,
+				Font = Enum.Font.Gotham,
+				TextSize = 14
+			})
+			new("UICorner",{Parent=item,CornerRadius=UDim.new(0,6)})
+			item.MouseButton1Click:Connect(function() selectOption(opt) end)
+		end
 	
-	    for _,opt in ipairs(options) do
-	        local item = new("TextButton",{
-	            Parent = dropdownFrame,
-	            Size = UDim2.new(1,0,0,28),
-	            Text = opt,
-	            BackgroundColor3 = THEME.Button,
-	            TextColor3 = THEME.Text,
-	            Font = Enum.Font.Gotham,
-	            TextSize = 14
-	        })
-	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
-	        item.MouseButton1Click:Connect(function() selectOption(opt) end)
-	    end
-	
-	    -- Update dropdown position if window moves
-	    container:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-	        if open then
-	            dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
-	        end
-	    end)
-	
-	    return {Get=function() return selected end}
+		return {Get = function() return selected end}
 	end
 	
 	---------------------------------------------------------------------------------------------
