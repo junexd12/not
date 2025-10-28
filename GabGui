@@ -448,10 +448,7 @@ end
 
 return GabGui
 
--- ===============================
--- Separate draggable toggle button (spawns automatically)
--- ===============================
-do
+local function ToggleGui()
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0,40,0,40)
     toggleBtn.Position = UDim2.new(0.95, -40, 0.5, -20)
@@ -481,3 +478,6 @@ do
         end
     end
 end)
+end
+ToggleGui()
+
