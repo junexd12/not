@@ -145,7 +145,7 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-function TabObj:CreateDropdown(data)
+	function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
@@ -159,13 +159,22 @@ function TabObj:CreateDropdown(data)
 	        Parent=tabPanel,
 	        Size=UDim2.new(1,-20,0,36),
 	        BackgroundColor3=THEME.Button,
-	        ClipsDescendants = false,
+	        ClipsDescendants = true,
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	
-	    -- Dropdown button (stop dragging the window!)
+	    local label = new("TextLabel",{
+	        Parent=container,
+	        Size=UDim2.new(0.7,0,1,0),
+	        BackgroundTransparency=1,
+	        Text=name,
+	        TextXAlignment=Enum.TextXAlignment.Left,
+	        TextColor3=THEME.Text,
+	        Font=Enum.Font.Gotham,
+	        TextSize=14
+	    })
+	
 	    local btn = new("TextButton",{
 	        Parent=container,
 	        Size=UDim2.new(0.3,-8,1,0),
@@ -175,18 +184,8 @@ function TabObj:CreateDropdown(data)
 	        TextColor3=THEME.Text,
 	        Font=Enum.Font.GothamBold,
 	        TextSize=14,
-	        ZIndex=3,
-	        Active=true,
-	        AutoButtonColor=false
+	        ZIndex=3
 	    })
-	    -- Prevent dragging the main window when clicking dropdown
-	    btn.InputBegan:Connect(function(input)
-	        input.Changed:Connect(function()
-	            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-	                UserInputService.InputBegan:Wait()
-	            end
-	        end)
-	    end)
 	
 	    -- Dropdown frame
 	    local dropdownFrame = new("ScrollingFrame",{
@@ -197,9 +196,8 @@ function TabObj:CreateDropdown(data)
 	        Visible=false,
 	        ScrollBarThickness=6,
 	        ScrollingDirection=Enum.ScrollingDirection.Y,
-	        ZIndex=10,
 	        ClipsDescendants=false,
-	        AutomaticCanvasSize=Enum.AutomaticSize.Y
+	        ZIndex=10
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
@@ -210,7 +208,7 @@ function TabObj:CreateDropdown(data)
 	        open = not open
 	        local totalHeight = #options * 28
 	        local targetHeight = math.min(totalHeight, maxVisible * 28)
-	        dropdownFrame.Visible = open
+	        dropdownFrame.Visible = true
 	        dropdownFrame.CanvasSize = UDim2.new(0,0,0,totalHeight)
 	        container:TweenSize(
 	            open and UDim2.new(1,-20,0,36 + targetHeight + 2) or UDim2.new(1,-20,0,36),
@@ -230,6 +228,7 @@ function TabObj:CreateDropdown(data)
 	            else
 	                table.insert(selected,opt)
 	            end
+	            btn.Text = table.concat(selected,", ")
 	        else
 	            selected = {opt}
 	            btn.Text = opt
