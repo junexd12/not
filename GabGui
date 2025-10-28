@@ -55,6 +55,28 @@ function GabGui:CreateWindow(opts)
     local pos = opts.Position or UDim2.new(0.5, -size.X.Offset/2, 0.5, -size.Y.Offset/2)
     local ScreenGui = new("ScreenGui",{Parent=PlayerGui, ResetOnSpawn=false, Name="GabGui_"..tostring(name)})
     ScreenGui.IgnoreGuiInset = true
+    
+    local success, RobloxSettings = pcall(function()
+	    return game:GetService("CoreGui"):WaitForChild("RobloxGui"):WaitForChild("Settings"):WaitForChild("Menu")
+	end)
+	
+	if success and RobloxSettings then
+	    local toggleBtn = new("TextButton", {
+	        Parent = RobloxSettings,
+	        Size = UDim2.new(1,0,0,36),
+	        BackgroundColor3 = Color3.fromRGB(50,50,50),
+	        TextColor3 = Color3.fromRGB(255,255,255),
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        Text = "GabGui: Visible ✅"
+	    })
+	    local visible = true
+	    toggleBtn.MouseButton1Click:Connect(function()
+	        visible = not visible
+	        ScreenGui.Enabled = visible
+	        toggleBtn.Text = "GabGui: Visible " .. (visible and "✅" or "❌")
+	    end)
+	end
 
     local frame = new("Frame",{Parent=ScreenGui, Size=size, Position=pos, BackgroundColor3=THEME.Background, BorderSizePixel=0})
     frame.Active = true
