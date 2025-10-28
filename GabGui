@@ -187,9 +187,9 @@ function TabObj:CreateDropdown(data)
 	        TextSize = 14
 	    })
 	
-	    -- Dropdown frame (parented to PlayerGui for free positioning)
+	    -- Dropdown frame (parented to PlayerGui, so it floats above everything)
 	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = PlayerGui, -- important, outside tabPanel
+	        Parent = PlayerGui,
 	        Size = UDim2.new(0, container.AbsoluteSize.X, 0, 0),
 	        Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y),
 	        BackgroundColor3 = THEME.Button,
@@ -197,8 +197,7 @@ function TabObj:CreateDropdown(data)
 	        ScrollingDirection = Enum.ScrollingDirection.Y,
 	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	        ZIndex = 5,
-	        Visible = false,
-	        ClipsDescendants = true
+	        Visible = false
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
@@ -207,10 +206,10 @@ function TabObj:CreateDropdown(data)
 	
 	    local function toggleDropdown()
 	        open = not open
-	        dropdownFrame.Visible = true
 	        local totalHeight = #options * 28
 	        local targetHeight = math.min(totalHeight, maxVisible * 28)
-	
+	        dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
+	        dropdownFrame.Visible = true
 	        dropdownFrame:TweenSize(
 	            UDim2.new(0, container.AbsoluteSize.X, 0, open and targetHeight or 0),
 	            "Out","Quad",0.25,true,
@@ -218,16 +217,9 @@ function TabObj:CreateDropdown(data)
 	                if not open then dropdownFrame.Visible = false end
 	            end
 	        )
-	
-	        -- Position always follows button
-	        dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
 	    end
 	
-	    btn.InputEnded:Connect(function(input, gameProcessedEvent)
-	        if not gameProcessedEvent and (input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch) then
-	            toggleDropdown()
-	        end
-	    end)
+	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
 	    local function selectOption(opt)
 	        if multi then
@@ -244,7 +236,7 @@ function TabObj:CreateDropdown(data)
 	        if data.Callback then pcall(data.Callback, selected) end
 	    end
 	
-	    for i,opt in ipairs(options) do
+	    for _,opt in ipairs(options) do
 	        local item = new("TextButton",{
 	            Parent = dropdownFrame,
 	            Size = UDim2.new(1,0,0,28),
@@ -255,22 +247,12 @@ function TabObj:CreateDropdown(data)
 	            TextSize = 14
 	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
-	        item.InputEnded:Connect(function(input, gameProcessedEvent)
-	            if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-	                selectOption(opt)
-	            end
-	        end)
+	        item.MouseButton1Click:Connect(function() selectOption(opt) end)
 	    end
 	
-	    -- Update position on resize/move
+	    -- Update dropdown position if window moves
 	    container:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
 	        if open then
-	            dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
-	        end
-	    end)
-	    container:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-	        if open then
-	            dropdownFrame.Size = UDim2.new(0, container.AbsoluteSize.X, 0, dropdownFrame.Size.Y.Offset)
 	            dropdownFrame.Position = container.AbsolutePosition + Vector2.new(0, container.AbsoluteSize.Y)
 	        end
 	    end)
