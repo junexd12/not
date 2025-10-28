@@ -185,7 +185,11 @@ function TabObj:CreateDropdown(data)
 	        dropdownFrame.Visible = open
 	    end
 	
-	    btn.MouseButton1Click:Connect(toggleDropdown)
+	    btn.InputBegan:Connect(function(input, gameProcessedEvent)
+	        if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+	            toggleDropdown()
+	        end
+	    end)
 	
 	    for i,opt in ipairs(options) do
 	        local item = new("TextButton",{Parent=dropdownFrame, Size=UDim2.new(1,0,0,28), Text=opt, BackgroundColor3=THEME.Button, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
