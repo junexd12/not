@@ -223,7 +223,7 @@ function TabObj:CreateDropdown(data)
 	
 	
 	-- Keybind
-function TabObj:CreateKeybind(data)
+	function TabObj:CreateKeybind(data)
 	    data = data or {}
 	    local name = data.Name or "Keybind"
 	    local key = data.CurrentKeybind or "Q"
@@ -234,7 +234,7 @@ function TabObj:CreateKeybind(data)
 	
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	
-	    local keyBtn = new("TextButton",{
+	    local keyBox = new("TextBox",{
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
@@ -243,24 +243,24 @@ function TabObj:CreateKeybind(data)
 	        BackgroundColor3 = THEME.Button,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
-	        TextSize = 14
+	        TextSize = 14,
+	        ClearTextOnFocus = false
 	    })
-	    new("UICorner",{Parent=keyBtn, CornerRadius=UDim.new(0,6)})
+	    new("UICorner",{Parent=keyBox, CornerRadius=UDim.new(0,6)})
 	
-	    keyBtn.MouseButton1Click:Connect(function()
-	        keyBtn.Text = "..."
-	        local conn
-	        conn = UserInputService.InputBegan:Connect(function(input, gpe)
-	            if not gpe and input.UserInputType == Enum.UserInputType.Keyboard then
-	                key = input.KeyCode.Name
-	                keyBtn.Text = key
-	                if data.Callback then pcall(data.Callback, input.KeyCode) end
-	                conn:Disconnect()
-	            end
-	        end)
+	    -- When player types a key
+	    keyBox.FocusLost:Connect(function(enterPressed)
+	        local typed = keyBox.Text:upper()
+	        if #typed == 1 then -- only accept single letters
+	            key = typed
+	            keyBox.Text = key
+	            if data.Callback then pcall(data.Callback, Enum.KeyCode[key]) end
+	        else
+	            keyBox.Text = key -- reset if invalid
+	        end
 	    end)
 	
-	    -- Detect key presses for hold/normal
+	    -- Detect key presses
 	    UserInputService.InputBegan:Connect(function(input, gpe)
 	        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == key and not gpe then
 	            if data.Callback then pcall(data.Callback, input.KeyCode) end
@@ -269,7 +269,7 @@ function TabObj:CreateKeybind(data)
 	
 	    return {
 	        Get = function() return key end,
-	        Set = function(_,v) key=v; keyBtn.Text=v end
+	        Set = function(_,v) key=v; keyBox.Text=v end
 	    }
 	end
 	
