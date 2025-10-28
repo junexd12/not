@@ -430,32 +430,38 @@ function TabObj:CreateDropdown(data)
     return WindowObj
 end
 
--- Small draggable toggle button 🔘
-	local toggleBtn = Instance.new("TextButton")
-	toggleBtn.Size = UDim2.new(0,36,0,36)
-	toggleBtn.Position = UDim2.new(1,-50,0,50)
-	toggleBtn.BackgroundColor3 = THEME.Accent
-	toggleBtn.Text = "🔘"
-	toggleBtn.TextScaled = true
-	toggleBtn.Font = Enum.Font.GothamBold
-	toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-	toggleBtn.Parent = PlayerGui
-	toggleBtn.AutoButtonColor = false
-	toggleBtn.ZIndex = 999
-	toggleBtn.Active = true
-	toggleBtn.Draggable = true  -- ✅ Roblox built-in dragging
-	
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1,0)
-	corner.Parent = toggleBtn
-	
-	-- Toggle GabGui window visibility
-	toggleBtn.MouseButton1Click:Connect(function()
-	    for _, gui in ipairs(PlayerGui:GetChildren()) do
-	        if gui.Name:match("GabGui_") then
-	            gui.Enabled = not gui.Enabled
-	        end
-	    end
-	end)
+-- Create a parent ScreenGui
+local toggleGui = Instance.new("ScreenGui")
+toggleGui.Name = "GabGuiToggle"
+toggleGui.ResetOnSpawn = false
+toggleGui.Parent = PlayerGui
+toggleGui.IgnoreGuiInset = true
 
+-- Small draggable toggle button 🔘
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0,36,0,36)
+toggleBtn.Position = UDim2.new(1,-50,0,50)
+toggleBtn.BackgroundColor3 = THEME.Accent
+toggleBtn.Text = "🔘"
+toggleBtn.TextScaled = true
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Parent = toggleGui
+toggleBtn.AutoButtonColor = false
+toggleBtn.ZIndex = 999
+toggleBtn.Active = true
+toggleBtn.Draggable = true  -- ✅ Works inside ScreenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1,0)
+corner.Parent = toggleBtn
+
+-- Toggle GabGui window visibility
+toggleBtn.MouseButton1Click:Connect(function()
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui.Name:match("GabGui_") then
+            gui.Enabled = not gui.Enabled
+        end
+    end
+end)
 return GabGui
