@@ -1,71 +1,120 @@
---// Local GabGui System
+-- 🩸 GabGui: Mini Rayfield Styled UI Framework (Client Only)
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
-
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
 local GabGui = {}
-GabGui.__index = GabGui
 
---// Window Creation
+-- ⚙️ Create a Window
 function GabGui:CreateWindow(settings)
-	local Window = {}
-	setmetatable(Window, GabGui)
+	local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+	gui.Name = "GabGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
 
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name = settings.Name or "GabGui"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.IgnoreGuiInset = true
-	ScreenGui.Parent = PlayerGui
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 320, 0, 240)
+	frame.Position = UDim2.new(0.5, -160, 0.5, -120)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.BackgroundColor3 = Color3.fromRGB(25,25,30)
+	frame.BorderSizePixel = 0
+	frame.Active = true
+	frame.Draggable = true
+	frame.Parent = gui
 
-	local MainFrame = Instance.new("Frame")
-	MainFrame.Name = "Main"
-	MainFrame.Size = UDim2.new(0, 400, 0, 300)
-	MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	MainFrame.BorderSizePixel = 0
-	MainFrame.Active = true
-	MainFrame.Draggable = true
-	MainFrame.Parent = ScreenGui
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+	local stroke = Instance.new("UIStroke", frame)
+	stroke.Thickness = 2
+	stroke.Color = Color3.fromRGB(180,0,255)
 
-	local UICorner = Instance.new("UICorner", MainFrame)
-	UICorner.CornerRadius = UDim.new(0, 8)
+	local header = Instance.new("TextLabel", frame)
+	header.Size = UDim2.new(1,0,0,30)
+	header.BackgroundColor3 = Color3.fromRGB(35,35,40)
+	header.Text = settings.Name or "GabGui Window"
+	header.Font = Enum.Font.GothamBold
+	header.TextSize = 16
+	header.TextColor3 = Color3.new(1,1,1)
+	Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
 
-	local Title = Instance.new("TextLabel")
-	Title.Text = settings.Name or "GabGui Window"
-	Title.Size = UDim2.new(1, 0, 0, 30)
-	Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	Title.TextSize = 18
-	Title.Font = Enum.Font.GothamBold
-	Title.Parent = MainFrame
+	local scroll = Instance.new("ScrollingFrame", frame)
+	scroll.Size = UDim2.new(1, -10, 1, -40)
+	scroll.Position = UDim2.new(0,5,0,35)
+	scroll.CanvasSize = UDim2.new(0,0,0,0)
+	scroll.ScrollBarThickness = 6
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.BackgroundTransparency = 1
 
-	local ScrollingFrame = Instance.new("ScrollingFrame")
-	ScrollingFrame.Size = UDim2.new(1, 0, 1, -30)
-	ScrollingFrame.Position = UDim2.new(0, 0, 0, 30)
-	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-	ScrollingFrame.ScrollBarThickness = 4
-	ScrollingFrame.BackgroundTransparency = 1
-	ScrollingFrame.Parent = MainFrame
+	local list = Instance.new("UIListLayout", scroll)
+	list.Padding = UDim.new(0,8)
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	local UIListLayout = Instance.new("UIListLayout")
-	UIListLayout.Padding = UDim.new(0, 6)
-	UIListLayout.Parent = ScrollingFrame
-
-	-- store for later elements
-	Window.Frame = MainFrame
-	Window.Scroll = ScrollingFrame
-	Window.Elements = {}
-
+	local Window = {
+		Scroll = scroll,
+		Elements = {},
+	}
+	setmetatable(Window, {__index = GabGui})
 	return Window
 end
 
---// CreateTab (just returns the same window for now)
+-- 🟪 Create Tab (for now, returns same window)
 function GabGui:CreateTab(name)
-	local Tab = {}
-	setmetatable(Tab, GabGui)
-	Tab.Name = name or "Tab"
-	Tab.Elements = {}
-	return Tab
+	return self
+end
+
+-- 🟣 Create Toggle
+function GabGui:CreateToggle(data)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(0.9,0,0,40)
+	holder.BackgroundColor3 = Color3.fromRGB(40,40,50)
+	holder.Parent = self.Scroll
+	Instance.new("UICorner", holder).CornerRadius = UDim.new(0,10)
+
+	local label = Instance.new("TextLabel", holder)
+	label.Size = UDim2.new(0.6,0,1,0)
+	label.Position = UDim2.new(0.05,0,0,0)
+	label.BackgroundTransparency = 1
+	label.Text = data.Name or "Toggle"
+	label.Font = Enum.Font.GothamSemibold
+	label.TextSize = 14
+	label.TextColor3 = Color3.new(1,1,1)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local toggle = Instance.new("Frame", holder)
+	toggle.Size = UDim2.new(0,50,0,22)
+	toggle.Position = UDim2.new(0.8,0,0.25,0)
+	toggle.BackgroundColor3 = Color3.fromRGB(60,60,70)
+	toggle.BorderSizePixel = 0
+	Instance.new("UICorner", toggle).CornerRadius = UDim.new(0,11)
+
+	local knob = Instance.new("Frame", toggle)
+	knob.Size = UDim2.new(0,18,0,18)
+	knob.Position = UDim2.new(0.05,0,0.1,0)
+	knob.BackgroundColor3 = Color3.fromRGB(180,0,255)
+	knob.BorderSizePixel = 0
+	Instance.new("UICorner", knob).CornerRadius = UDim.new(0,9)
+
+	local on = data.CurrentValue or false
+	local callback = data.Callback or function() end
+
+	local function setToggle(state)
+		on = state
+		if on then
+			TweenService:Create(knob,TweenInfo.new(0.25),{Position=UDim2.new(1,-23,0.1,0)}):Play()
+			TweenService:Create(toggle,TweenInfo.new(0.25),{BackgroundColor3=Color3.fromRGB(180,0,255)}):Play()
+		else
+			TweenService:Create(knob,TweenInfo.new(0.25),{Position=UDim2.new(0.05,0,0.1,0)}):Play()
+			TweenService:Create(toggle,TweenInfo.new(0.25),{BackgroundColor3=Color3.fromRGB(60,60,70)}):Play()
+		end
+		callback(on)
+	end
+
+	toggle.InputBegan:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+			setToggle(not on)
+		end
+	end)
+
+	self.Elements[data.Flag or ("Toggle"..#self.Elements+1)] = setToggle
+	return setToggle
 end
 
 return GabGui
