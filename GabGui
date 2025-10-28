@@ -239,7 +239,7 @@ function TabObj:CreateKeybind(data)
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
 	        Text = key,
-	        BackgroundTransparency = 0.1,
+	        BackgroundTransparency = 0.8,
 	        BackgroundColor3 = THEME.Button,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
