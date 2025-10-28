@@ -145,80 +145,61 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-function TabObj:CreateDropdown(data)
+	function TabObj:CreateSlider(data)
 	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
-	    local maxVisible = data.MaxVisibleOptions or 5
-	    local selected = options[1]
+	    local name = data.Name or "Slider"
+	    local min,max = (data.Range and data.Range[1]) or 0, (data.Range and data.Range[2]) or 100
+	    local inc = data.Increment or 1
+	    local cur = data.CurrentValue or min
+	    local suffix = data.Suffix or ""
 	
-	    -- Container inside tabPanel (UIListLayout will push other buttons)
-	    local container = new("Frame",{
-	        Parent=tabPanel,
-	        Size=UDim2.new(1,-20,0,36),
-	        BackgroundTransparency=1
-	    })
-	    new("UIListLayout",{Parent=container, SortOrder=Enum.SortOrder.LayoutOrder})
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,48), BackgroundTransparency=1})
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(1,0,0,18), Position=UDim2.new(0,0,0,0), BackgroundTransparency=1, Text=name.." : "..tostring(cur)..(suffix~="" and " "..suffix or ""), TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
+	    local track = new("Frame",{Parent=container, Size=UDim2.new(1,-40,0,18), Position=UDim2.new(0,16,0,24), BackgroundColor3=Color3.fromRGB(60,60,70)})
+	    new("UICorner",{Parent=track, CornerRadius=UDim.new(0,8)})
+	    local fill = new("Frame",{Parent=track, Size=UDim2.new((cur-min)/(max-min),0,1,0), BackgroundColor3=THEME.Accent})
+	    new("UICorner",{Parent=fill, CornerRadius=UDim.new(0,8)})
 	
-	    local mainBtn = new("TextButton",{
-	        Parent=container,
-	        Size=UDim2.new(1,0,0,36),
-	        Text="  "..name.." : "..selected,
-	        TextXAlignment=Enum.TextXAlignment.Left,
-	        BackgroundColor3=THEME.Button,
-	        TextColor3=THEME.Text,
-	        Font=Enum.Font.Gotham,
-	        TextSize=14
-	    })
-	    new("UICorner",{Parent=mainBtn, CornerRadius=UDim.new(0,8)})
+	    local dragging = false
 	
-	    -- Options scrolling frame
-	    local optionsFrame = new("ScrollingFrame",{
-	        Parent=container,
-	        Size=UDim2.new(1,0,0,0),
-	        BackgroundColor3=THEME.Button,
-	        ClipsDescendants=true,
-	        ScrollBarThickness=6,
-	        CanvasSize=UDim2.new(0,0,0,0)
-	    })
-	    local layout = new("UIListLayout",{Parent=optionsFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
-	
-	    for _,opt in ipairs(options) do
-	        local btn = new("TextButton",{
-	            Parent=optionsFrame,
-	            Size=UDim2.new(1,0,0,28),
-	            Text=opt,
-	            BackgroundColor3=THEME.Button,
-	            TextColor3=THEME.Text,
-	            Font=Enum.Font.Gotham,
-	            TextSize=14
-	        })
-	        new("UICorner",{Parent=btn, CornerRadius=UDim.new(0,6)})
-	
-	        btn.MouseButton1Click:Connect(function()
-	            selected = opt
-	            mainBtn.Text = "  "..name.." : "..opt
-	            toggleDropdown(false)
-	            if data.Callback then pcall(data.Callback,opt) end
-	        end)
+	    local function updateValue(value)
+	        cur = math.clamp(math.floor((value-min)/inc+0.5)*inc + min, min, max)
+	        fill.Size = UDim2.new((cur-min)/(max-min),0,1,0)
+	        label.Text = name.." : "..tostring(cur)..(suffix~="" and " "..suffix or "")
+	        if data.Callback then pcall(data.Callback, cur) end
 	    end
 	
-	    local open = false
-	    function toggleDropdown(state)
-	        open = state or not open
-	        local totalHeight = layout.AbsoluteContentSize.Y
-	        local targetHeight = open and math.min(totalHeight, maxVisible*28) or 0
-	        optionsFrame.CanvasSize = UDim2.new(0,0,0,totalHeight)
-	        TweenService:Create(optionsFrame, TweenInfo.new(0.25,Enum.EasingStyle.Quad), {Size=UDim2.new(1,0,0,targetHeight)}):Play()
-	        TweenService:Create(container, TweenInfo.new(0.25,Enum.EasingStyle.Quad), {Size=UDim2.new(1,-20,0,36+targetHeight)}):Play()
+	    local function setFromX(x)
+	        local rel = math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+	        updateValue(min + rel*(max-min))
 	    end
 	
-	    mainBtn.MouseButton1Click:Connect(function()
-	        toggleDropdown()
+	    track.InputBegan:Connect(function(i)
+	        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+	            dragging = true
+	            setFromX(i.Position.X)
+	        end
+	    end)
+	    track.InputEnded:Connect(function(i)
+	        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+	            dragging = false
+	        end
+	    end)
+	    UserInputService.InputChanged:Connect(function(i)
+	        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+	            setFromX(i.Position.X)
+	        end
 	    end)
 	
-	    return {Get=function() return selected end}
+	    return {
+	        CurrentValue = cur,
+	        Set = function(_,v)
+	            if type(v)=="number" then
+	                updateValue(v)
+	            end
+	        end,
+	        Get = function() return cur end
+	    }
 	end
 	
 	
