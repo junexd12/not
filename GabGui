@@ -145,7 +145,7 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-	-- Dropdown (FIXED: Hidden options + input reliability)
+-- Dropdown (FIXED: Hidden options + input reliability)
 	function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
@@ -196,11 +196,6 @@ function GabGui:CreateWindow(opts)
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
-	    
-	    -- NEW FIX 1: Force canvas size update for options (fixes hidden options)
-	    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	        dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
-	    end)
 	
 	    local open = false
 	
@@ -219,12 +214,8 @@ function GabGui:CreateWindow(opts)
 	            true
 	        )
 	        dropdownFrame.Visible = open
+		    dropdownFrame.CanvasSize = UDim2.new(1, 0, 0, targetHeight)
 	    end
-	
-	    -- Single FIX 2: Add backup mouse click handler (fixes mobile/PC input reliability)
-	    btn.MouseButton1Click:Connect(function()
-	        toggleDropdown()
-	    end)
 	
 	    -- Single input connection (mobile touch + PC mouse)
 	    btn.InputEnded:Connect(function(input, gameProcessedEvent)
