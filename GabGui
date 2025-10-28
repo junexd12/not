@@ -154,12 +154,12 @@ function TabObj:CreateDropdown(data)
 		    local selected = multi and {} or { options[1] }
 		    local maxVisible = data.MaxVisibleOptions or 5
 		
-		    -- Container frame
+		    -- Container (fixed height, button stays put)
 		    local container = new("Frame",{
 		        Parent = tabPanel,
 		        Size = UDim2.new(1,-20,0,36),
 		        BackgroundColor3 = THEME.Button,
-		        ClipsDescendants = false, -- container does not clip dropdown
+		        ClipsDescendants = false,
 		        LayoutOrder = data.LayoutOrder or 0
 		    })
 		    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
@@ -176,7 +176,7 @@ function TabObj:CreateDropdown(data)
 		        TextSize = 14
 		    })
 		
-		    -- Button (always visible)
+		    -- Button (always fixed)
 		    local btn = new("TextButton",{
 		        Parent = container,
 		        Size = UDim2.new(0.3,-8,1,0),
@@ -192,9 +192,9 @@ function TabObj:CreateDropdown(data)
 		        CaptureTouch = true
 		    })
 		
-		    -- Dropdown frame parented to tabPanel (so it floats above other UI, not inside container)
+		    -- Dropdown frame (positioned directly below container)
 		    local dropdownFrame = new("ScrollingFrame",{
-		        Parent = tabPanel,
+		        Parent = tabPanel, -- float above other UI
 		        Size = UDim2.new(1,-20,0,0),
 		        Position = container.Position + UDim2.new(0,0,0,36),
 		        BackgroundColor3 = THEME.Button,
@@ -215,7 +215,7 @@ function TabObj:CreateDropdown(data)
 		        local totalHeight = #options * 28
 		        local targetHeight = math.min(totalHeight, maxVisible * 28)
 		
-		        -- Tween dropdown frame height
+		        -- Only change dropdown height; button stays put
 		        dropdownFrame:TweenSize(
 		            UDim2.new(1,0,0,(open and targetHeight or 0)),
 		            "Out",
