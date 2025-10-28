@@ -1,0 +1,71 @@
+--// Local GabGui System
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local GabGui = {}
+GabGui.__index = GabGui
+
+--// Window Creation
+function GabGui:CreateWindow(settings)
+	local Window = {}
+	setmetatable(Window, GabGui)
+
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = settings.Name or "GabGui"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.IgnoreGuiInset = true
+	ScreenGui.Parent = PlayerGui
+
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Name = "Main"
+	MainFrame.Size = UDim2.new(0, 400, 0, 300)
+	MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	MainFrame.BorderSizePixel = 0
+	MainFrame.Active = true
+	MainFrame.Draggable = true
+	MainFrame.Parent = ScreenGui
+
+	local UICorner = Instance.new("UICorner", MainFrame)
+	UICorner.CornerRadius = UDim.new(0, 8)
+
+	local Title = Instance.new("TextLabel")
+	Title.Text = settings.Name or "GabGui Window"
+	Title.Size = UDim2.new(1, 0, 0, 30)
+	Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Title.TextSize = 18
+	Title.Font = Enum.Font.GothamBold
+	Title.Parent = MainFrame
+
+	local ScrollingFrame = Instance.new("ScrollingFrame")
+	ScrollingFrame.Size = UDim2.new(1, 0, 1, -30)
+	ScrollingFrame.Position = UDim2.new(0, 0, 0, 30)
+	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	ScrollingFrame.ScrollBarThickness = 4
+	ScrollingFrame.BackgroundTransparency = 1
+	ScrollingFrame.Parent = MainFrame
+
+	local UIListLayout = Instance.new("UIListLayout")
+	UIListLayout.Padding = UDim.new(0, 6)
+	UIListLayout.Parent = ScrollingFrame
+
+	-- store for later elements
+	Window.Frame = MainFrame
+	Window.Scroll = ScrollingFrame
+	Window.Elements = {}
+
+	return Window
+end
+
+--// CreateTab (just returns the same window for now)
+function GabGui:CreateTab(name)
+	local Tab = {}
+	setmetatable(Tab, GabGui)
+	Tab.Name = name or "Tab"
+	Tab.Elements = {}
+	return Tab
+end
+
+return GabGui
