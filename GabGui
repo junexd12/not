@@ -145,7 +145,7 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-	function TabObj:CreateDropdown(data)
+function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
@@ -154,17 +154,16 @@ function GabGui:CreateWindow(opts)
 	    local selected = multi and {} or { options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Main container
+	    -- Main container (only holds the label and button)
 	    local container = new("Frame",{
 	        Parent=tabPanel,
 	        Size=UDim2.new(1,-20,0,36),
 	        BackgroundColor3=THEME.Button,
-	        ClipsDescendants = true,
+	        ClipsDescendants=false,
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
-	    -- Label
 	    local label = new("TextLabel",{
 	        Parent=container,
 	        Size=UDim2.new(0.7,0,1,0),
@@ -176,7 +175,6 @@ function GabGui:CreateWindow(opts)
 	        TextSize=14
 	    })
 	
-	    -- Dropdown button (fixed, won’t drag)
 	    local btn = new("TextButton",{
 	        Parent=container,
 	        Size=UDim2.new(0.3,-8,1,0),
@@ -191,23 +189,16 @@ function GabGui:CreateWindow(opts)
 	        AutoButtonColor=false
 	    })
 	
-	    -- Prevent dropdown button from dragging window
-	    btn.InputBegan:Connect(function(input)
-	        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-	            input:Capture()
-	        end
-	    end)
-	
-	    -- Dropdown options frame
+	    -- Options frame (parented to tabPanel, not container!)
 	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent=container,
-	        Size=UDim2.new(1,0,0,0),
-	        Position=UDim2.new(0,0,1,2),
+	        Parent=tabPanel,
+	        Size=UDim2.new(container.Size.X.Scale, container.Size.X.Offset, 0, 0),
+	        Position=container.Position + UDim2.new(0,0,0,36+2),
 	        BackgroundColor3=THEME.Button,
 	        Visible=false,
 	        ScrollBarThickness=6,
 	        ScrollingDirection=Enum.ScrollingDirection.Y,
-	        ClipsDescendants=true,
+	        ClipsDescendants=false,
 	        ZIndex=10
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
@@ -221,13 +212,11 @@ function GabGui:CreateWindow(opts)
 	        local targetHeight = math.min(totalHeight, maxVisible * 28)
 	        dropdownFrame.Visible = true
 	        dropdownFrame.CanvasSize = UDim2.new(0,0,0,totalHeight)
-	        container:TweenSize(
-	            open and UDim2.new(1,-20,0,36 + targetHeight + 2) or UDim2.new(1,-20,0,36),
-	            "Out",
-	            "Quad",
-	            0.25,
-	            true
-	        )
+	        local tween = TweenService:Create(dropdownFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size=UDim2.new(container.Size.X.Scale, container.Size.X.Offset, 0, targetHeight)})
+	        tween:Play()
+	        if not open then
+	            tween.Completed:Connect(function() dropdownFrame.Visible=false end)
+	        end
 	    end
 	
 	    btn.MouseButton1Click:Connect(toggleDropdown)
@@ -248,7 +237,7 @@ function GabGui:CreateWindow(opts)
 	        if data.Callback then pcall(data.Callback, selected) end
 	    end
 	
-	    -- Create option buttons inside scrollable frame
+	    -- Create option buttons
 	    for i,opt in ipairs(options) do
 	        local item = new("TextButton",{
 	            Parent=dropdownFrame,
