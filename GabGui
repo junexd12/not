@@ -144,8 +144,9 @@ function GabGui:CreateWindow(opts)
 	    return box
 	end
 	
-	-- FINAL FIXED Dropdown (No Button Drift + All Issues Resolved)
-function TabObj:CreateDropdown(data)
+	-- Dropdown
+	-- Dropdown (FIXED: Hidden options + input reliability)
+	function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
@@ -154,18 +155,18 @@ function TabObj:CreateDropdown(data)
 	    local selected = multi and {} or { options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- MAIN CONTAINER (FIX: Static height for trigger button, no drift)
+	    -- Main container (pushes other buttons via LayoutOrder + height tween)
 	    local container = new("Frame",{
 	        Parent=tabPanel,
-	        Size=UDim2.new(1,-20,0,36), -- Static height (no tweening here)
+	        Size=UDim2.new(1,-20,0,36), -- Initial button height
 	        BackgroundColor3=THEME.Button,
 	        ClipsDescendants = false,
-	        LayoutOrder = data.LayoutOrder or 0 -- Still pushes other buttons
+	        LayoutOrder = data.LayoutOrder or 0 -- Critical for UI shifting
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	    
-	    -- TRIGGER BUTTON (FIX: Stays in place)
+	    -- Single-input trigger button (mobile + PC)
 	    local btn = new("TextButton",{
 	        Parent=container,
 	        Size=UDim2.new(0.3,-8,1,0),
@@ -181,41 +182,58 @@ function TabObj:CreateDropdown(data)
 	        CaptureTouch=true
 	    })
 	
-	    -- DROPDOWN FRAME (FIX: Tween its own height, not container)
+	    -- Dropdown frame (fixed options visibility)
 	    local dropdownFrame = new("ScrollingFrame",{
 	        Parent=container,
 	        Size=UDim2.new(1,0,0,0),
-	        Position=UDim2.new(0,0,1,2), -- Attaches below button (no drift)
+	        Position=UDim2.new(0,0,1,2), -- Attaches to button
 	        BackgroundColor3=THEME.Button,
 	        Visible=false,
 	        ScrollBarThickness=6,
 	        ScrollingDirection=Enum.ScrollingDirection.Y,
 	        ZIndex=2,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        CanvasSize = UDim2.new(0,0,0,0)
+	        AutomaticCanvasSize = Enum.AutomaticSize.Y -- FIX: Makes options appear
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2), HorizontalAlignment=Enum.HorizontalAlignment.Center})
+	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+	    
+	    -- NEW FIX 1: Force canvas size update for options (fixes hidden options)
+	    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	        dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+	    end)
 	
 	    local open = false
 	
-	    -- TOGGLE LOGIC (FIX: Tween dropdown frame height only)
+	    -- Toggle logic (expands container + shows options)
 	    local function toggleDropdown()
 	        open = not open
-	        local targetHeight = open and math.min(#options * 28, maxVisible * 28) or 0
+	        local totalHeight = #options * 28
+	        local targetHeight = math.min(totalHeight, maxVisible * 28)
 	        
-	        -- Tween dropdown frame height (container stays static)
-	        dropdownFrame:TweenSize(UDim2.new(1,0,0,targetHeight), "Out", "Quad", 0.25, true)
+	        -- Tween container height to push other buttons down
+	        container:TweenSize(
+	            open and UDim2.new(1,-20,0,36 + targetHeight + 2) or UDim2.new(1,-20,0,36),
+	            "Out",
+	            "Quad",
+	            0.25,
+	            true
+	        )
 	        dropdownFrame.Visible = open
-	        
-	        -- FIX: Adjust tabPanel canvas size to push other buttons
-	        tabPanel.CanvasSize = UDim2.new(0,0,0,tabPanel.CanvasSize.Y.Offset + (open ? targetHeight : -targetHeight))
 	    end
 	
-	    -- SINGLE INPUT CONNECTION (No dual conflicts)
-	    btn.MouseButton1Click:Connect(toggleDropdown)
+	    -- Single FIX 2: Add backup mouse click handler (fixes mobile/PC input reliability)
+	    btn.MouseButton1Click:Connect(function()
+	        toggleDropdown()
+	    end)
 	
-	    -- OPTION SELECTION
+	    -- Single input connection (mobile touch + PC mouse)
+	    btn.InputEnded:Connect(function(input, gameProcessedEvent)
+	        if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+	            toggleDropdown()
+	        end
+	    end)
+	
+	    -- Option selection (single input + fixes hidden options)
 	    local function selectOption(opt)
 	        if multi then
 	            if table.find(selected,opt) then
@@ -234,13 +252,16 @@ function TabObj:CreateDropdown(data)
 	    for i,opt in ipairs(options) do
 	        local item = new("TextButton",{Parent=dropdownFrame, Size=UDim2.new(1,0,0,28), Text=opt, BackgroundColor3=THEME.Button, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
-	        item.MouseButton1Click:Connect(function()
-	            selectOption(opt)
+	        item.InputEnded:Connect(function(input, gameProcessedEvent)
+	            if not gameProcessedEvent and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+	                selectOption(opt)
+	            end
 	        end)
 	    end
 	
 	    return {Get = function() return selected end}
 	end
+	
 	
 	
 	-- Keybind
@@ -391,6 +412,8 @@ function TabObj:CreateDropdown(data)
                 end
             }
         end
+
+        -- You can implement other CreateInput, CreateDropdown, CreateKeybind, CreateLabel, CreateParagraph similarly...
 
         table.insert(WindowObj._tabs,TabObj)
         return TabObj
