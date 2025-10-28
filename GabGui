@@ -117,6 +117,137 @@ function GabGui:CreateWindow(opts)
             new("TextLabel",{Parent=sec, Text=title or "", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=15, Size=UDim2.new(1,0,1,0), TextXAlignment=Enum.TextXAlignment.Left})
             return TabObj -- return tab for chaining
         end
+        
+        -- Input Box
+	function TabObj:CreateInput(data)
+	    data = data or {}
+	    local name = data.Name or "Input"
+	    local placeholder = data.PlaceholderText or ""
+	    local curVal = data.CurrentValue or ""
+	    local removeAfterFocusLost = data.RemoveTextAfterFocusLost or false
+	
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
+	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+	    local label = new("TextLabel",{Parent=container, Position=UDim2.new(0,8,0,0), Size=UDim2.new(0.4,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	    local box = new("TextBox",{Parent=container, Position=UDim2.new(0.4,8,0.1,0), Size=UDim2.new(0.55,-8,0.8,0), Text=curVal, PlaceholderText=placeholder, BackgroundColor3=Color3.fromRGB(60,60,70), TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, ClearTextOnFocus=false})
+	    new("UICorner",{Parent=box, CornerRadius=UDim.new(0,6)})
+	
+	    box.FocusLost:Connect(function(enterPressed)
+	        if enterPressed and data.Callback then
+	            pcall(data.Callback, box.Text)
+	        end
+	        if removeAfterFocusLost then
+	            box.Text = ""
+	        end
+	    end)
+	
+	    return box
+	end
+	
+	-- Dropdown
+	function TabObj:CreateDropdown(data)
+	    data = data or {}
+	    local name = data.Name or "Dropdown"
+	    local options = data.Options or {}
+	    local multi = data.MultipleOptions or false
+	    local selected = {}
+	
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
+	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	    local btn = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text="▼", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=16})
+	
+	    local dropdownFrame = new("Frame",{Parent=container, Size=UDim2.new(1,0,0,0), Position=UDim2.new(0,0,1,2), BackgroundColor3=THEME.Button, ClipsDescendants=true})
+	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
+	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+	
+	    local open = false
+	    local function toggleDropdown()
+	        open = not open
+	        dropdownFrame:TweenSize(open and UDim2.new(1,0,0,#options*28) or UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
+	    end
+	    btn.MouseButton1Click:Connect(toggleDropdown)
+	
+	    for i,opt in ipairs(options) do
+	        local item = new("TextButton",{Parent=dropdownFrame, Size=UDim2.new(1,0,0,28), Text=opt, BackgroundColor3=THEME.Button, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
+	        item.MouseButton1Click:Connect(function()
+	            if multi then
+	                if table.find(selected,opt) then
+	                    table.remove(selected,table.find(selected,opt))
+	                else
+	                    table.insert(selected,opt)
+	                end
+	            else
+	                selected = {opt}
+	                toggleDropdown()
+	            end
+	            if data.Callback then pcall(data.Callback, selected) end
+	        end)
+	    end
+	
+	    return {
+	        Get=function() return selected end
+	    }
+	end
+	
+	-- Keybind
+	function TabObj:CreateKeybind(data)
+	    data = data or {}
+	    local name = data.Name or "Keybind"
+	    local key = data.CurrentKeybind or "Q"
+	    local hold = data.HoldToInteract or false
+	
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
+	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
+	    local keyLabel = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=key, BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
+	
+	    keyLabel.MouseButton1Click:Connect(function()
+	        keyLabel.Text = "..."
+	        local conn
+	        conn = UserInputService.InputBegan:Connect(function(i,gpe)
+	            if not gpe and i.UserInputType==Enum.UserInputType.Keyboard then
+	                key = i.KeyCode.Name
+	                keyLabel.Text = key
+	                if data.Callback then pcall(data.Callback,i.KeyCode) end
+	                conn:Disconnect()
+	            end
+	        end)
+	    end)
+	
+	    if hold then
+	        UserInputService.InputBegan:Connect(function(i,gpe)
+	            if i.KeyCode.Name==key and not gpe then if data.Callback then pcall(data.Callback,i.KeyCode) end end
+	        end)
+	    else
+	        UserInputService.InputBegan:Connect(function(i,gpe)
+	            if i.KeyCode.Name==key and not gpe then if data.Callback then pcall(data.Callback,i.KeyCode) end end
+	        end)
+	    end
+	
+	    return {
+	        Get=function() return key end,
+	        Set=function(_,v) key=v; keyLabel.Text=v end
+	    }
+	end
+	
+	-- Label
+	function TabObj:CreateLabel(text)
+	    local lbl = new("TextLabel",{Parent=tabPanel, Text=text or "", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
+	    return lbl
+	end
+	
+	-- Paragraph
+	function TabObj:CreateParagraph(data)
+	    data = data or {}
+	    local title = data.Title or ""
+	    local content = data.Content or ""
+	    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,50), BackgroundTransparency=1})
+	    local titleLbl = new("TextLabel",{Parent=container, Text=title, Font=Enum.Font.GothamBold, TextSize=14, TextColor3=THEME.Text, BackgroundTransparency=1, TextXAlignment=Enum.TextXAlignment.Left, Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,0,18)})
+	    local contentLbl = new("TextLabel",{Parent=container, Text=content, Font=Enum.Font.Gotham, TextSize=14, TextColor3=THEME.Text, BackgroundTransparency=1, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, Position=UDim2.new(0,0,0,20), Size=UDim2.new(1,0,0,30)})
+	    return container
+	end
 
         function TabObj:CreateButton(data)
             local btn = new("TextButton",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button, Text="  "..(data.Name or "Button"), TextXAlignment=Enum.TextXAlignment.Left, Font=Enum.Font.Gotham, TextSize=14, TextColor3=THEME.Text})
