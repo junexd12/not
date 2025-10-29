@@ -237,155 +237,124 @@ function TabObj:CreateDropdown(data)
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
 	    if #options == 0 then return end
+	
 	    local multi = data.MultipleOptions or false
 	    local selected = multi and {} or { data.CurrentOption or options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
+	    local open = false
 	
-	    -- Main dropdown container (in layout)
 	    local container = new("Frame", {
 	        Parent = tabPanel,
-	        Size = UDim2.new(1, -20, 0, 36),
+	        Size = UDim2.new(1,-20,0,36),
 	        BackgroundColor3 = THEME.Button,
-	        ClipsDescendants = true
+	        BorderSizePixel = 0,
+	        ClipsDescendants = false -- 🔹 allow dropdown to expand outside
 	    })
-	    new("UICorner", { Parent = container, CornerRadius = UDim.new(0, 8) })
+	    new("UICorner",{Parent=container,CornerRadius=UDim.new(0,8)})
 	
-	    -- Label
-	    local label = new("TextLabel", {
+	    local label = new("TextLabel",{
 	        Parent = container,
-	        Size = UDim2.new(0.6, 0, 1, 0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextXAlignment = Enum.TextXAlignment.Left,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14
+	        Size = UDim2.new(0.6,0,1,0),
+	        BackgroundTransparency=1,
+	        Text=name,
+	        TextXAlignment=Enum.TextXAlignment.Left,
+	        TextColor3=THEME.Text,
+	        Font=Enum.Font.Gotham,
+	        TextSize=14
 	    })
 	
-	    -- Main button
-	    local btn = new("TextButton", {
+	    local btn = new("TextButton",{
 	        Parent = container,
-	        Size = UDim2.new(0.4, -4, 1, 0),
-	        Position = UDim2.new(0.6, 4, 0, 0),
-	        Text = selected[1] or "▼",
+	        Size = UDim2.new(0.4,-4,1,0),
+	        Position = UDim2.new(0.6,4,0,0),
+	        Text = selected[1] or "None ▼",
 	        BackgroundTransparency = 1,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
-	        TextSize = 14,
-	        ZIndex = 3
+	        TextSize = 14
 	    })
 	
-	    -- Inner dropdown frame
-	    local dropdownFrame = new("Frame", {
-	        Parent = container,
-	        Size = UDim2.new(1, 0, 0, 0),
-	        Position = UDim2.new(0, 0, 1, 0),
+	    -- separate frame for the dropdown list, *outside* the container so it pushes correctly
+	    local dropdownFrame = new("Frame",{
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0),
 	        BackgroundColor3 = THEME.Button,
 	        BorderSizePixel = 0,
-	        ZIndex = 2,
-	        ClipsDescendants = true
+	        Visible = false
 	    })
-	    new("UICorner", { Parent = dropdownFrame, CornerRadius = UDim.new(0, 6) })
-	    new("UIStroke", { Parent = dropdownFrame, Color = THEME.Accent, Thickness = 1 })
+	    new("UICorner",{Parent=dropdownFrame,CornerRadius=UDim.new(0,8)})
 	
-	    -- Scroll container
-	    local scroll = new("ScrollingFrame", {
-	        Parent = dropdownFrame,
-	        Size = UDim2.new(1, 0, 1, 0),
-	        BackgroundTransparency = 1,
-	        ScrollBarThickness = 6,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ScrollingDirection = Enum.ScrollingDirection.Y,
-	        ZIndex = 3
-	    })
-	    local listLayout = new("UIListLayout", {
-	        Parent = scroll,
-	        Padding = UDim.new(0, 2),
-	        SortOrder = Enum.SortOrder.LayoutOrder
-	    })
+	    local listLayout = new("UIListLayout",{Parent=dropdownFrame,Padding=UDim.new(0,2)})
 	
-	    -- Helper to update the button text
 	    local function updateBtnText()
 	        if multi then
 	            if #selected == 0 then
-	                btn.Text = "None"
+	                btn.Text = "None ▼"
 	            elseif #selected == 1 then
-	                btn.Text = selected[1]
+	                btn.Text = selected[1].." ▼"
 	            else
-	                btn.Text = selected[1] .. " + " .. (#selected - 1) .. " more"
+	                btn.Text = selected[1].." + "..(#selected-1).." ▼"
 	            end
 	        else
-	            btn.Text = selected[1] or "▼"
+	            btn.Text = (selected[1] or "None").." ▼"
 	        end
 	    end
-	    updateBtnText()
 	
-	    -- Add options
-	    for _, option in ipairs(options) do
-	        local optBtn = new("TextButton", {
-	            Parent = scroll,
-	            Size = UDim2.new(1, 0, 0, 28),
+	    -- Create option buttons
+	    for _,option in ipairs(options) do
+	        local optBtn = new("TextButton",{
+	            Parent = dropdownFrame,
+	            Size = UDim2.new(1,0,0,28),
 	            Text = option,
 	            BackgroundColor3 = THEME.Button,
 	            TextColor3 = THEME.Text,
 	            Font = Enum.Font.Gotham,
-	            TextSize = 14,
-	            ZIndex = 3
+	            TextSize = 14
 	        })
-	        new("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 6) })
-	
-	        local function refresh()
-	            if (multi and table.find(selected, option)) or (not multi and selected[1] == option) then
-	                optBtn.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
-	            else
-	                optBtn.BackgroundColor3 = THEME.Button
-	            end
-	        end
-	        refresh()
+	        new("UICorner",{Parent=optBtn,CornerRadius=UDim.new(0,6)})
 	
 	        optBtn.MouseButton1Click:Connect(function()
 	            if multi then
-	                local i = table.find(selected, option)
-	                if i then table.remove(selected, i)
-	                else table.insert(selected, option) end
+	                local found = table.find(selected, option)
+	                if found then
+	                    table.remove(selected, found)
+	                else
+	                    table.insert(selected, option)
+	                end
 	            else
-	                selected = { option }
+	                selected = {option}
 	                open = false
-	                dropdownFrame:TweenSize(UDim2.new(1, 0, 0, 0), "Out", "Quad", 0.25, true)
-	                container:TweenSize(UDim2.new(1, -20, 0, 36), "Out", "Quad", 0.25, true)
+	                dropdownFrame.Visible = false
 	            end
 	            updateBtnText()
-	            for _, child in ipairs(scroll:GetChildren()) do
-	                if child:IsA("TextButton") then
-	                    if (multi and table.find(selected, child.Text)) or (not multi and selected[1] == child.Text) then
-	                        child.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
-	                    else
-	                        child.BackgroundColor3 = THEME.Button
-	                    end
+	            for _,b in ipairs(dropdownFrame:GetChildren()) do
+	                if b:IsA("TextButton") then
+	                    b.BackgroundColor3 = table.find(selected, b.Text)
+	                        and Color3.fromRGB(180,120,255)
+	                        or THEME.Button
 	                end
 	            end
-	            if data.Callback then pcall(data.Callback, selected) end
+	            if data.Callback then pcall(data.Callback, multi and selected or selected[1]) end
 	        end)
 	    end
 	
-	    -- Open/close logic
-	    local open = false
 	    btn.MouseButton1Click:Connect(function()
 	        open = not open
+	        dropdownFrame.Visible = open
 	        if open then
-	            local totalHeight = math.min(#options, maxVisible) * 30
-	            dropdownFrame:TweenSize(UDim2.new(1, 0, 0, totalHeight + 6), "Out", "Quad", 0.25, true)
-	            container:TweenSize(UDim2.new(1, -20, 0, 36 + totalHeight + 6), "Out", "Quad", 0.25, true)
+	            local totalHeight = math.min(#options, maxVisible) * 30 + 6
+	            dropdownFrame.Size = UDim2.new(1,-20,0,totalHeight)
+	            -- push elements below
+	            dropdownFrame.LayoutOrder = container.LayoutOrder + 1
 	        else
-	            dropdownFrame:TweenSize(UDim2.new(1, 0, 0, 0), "Out", "Quad", 0.25, true)
-	            container:TweenSize(UDim2.new(1, -20, 0, 36), "Out", "Quad", 0.25, true)
+	            dropdownFrame.Size = UDim2.new(1,-20,0,0)
 	        end
 	    end)
 	
 	    return {
-	        Get = function() return multi and selected or selected[1] end,
-	        Set = function(_, val)
-	            selected = multi and val or { val }
+	        Get=function() return multi and selected or selected[1] end,
+	        Set=function(_,v)
+	            selected = multi and v or {v}
 	            updateBtnText()
 	        end
 	    }
