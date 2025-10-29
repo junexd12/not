@@ -233,152 +233,156 @@ function GabGui:CreateWindow(opts)
 
         -- Dropdown
 function TabObj:CreateDropdown(data)
-	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
-	    local multi = data.MultipleOptions or false
-	    local selected = multi and {} or { data.CurrentOption or options[1] }
-	    local maxVisible = data.MaxVisibleOptions or 5
-	
-	    local container = new("Frame", {
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button
-	    })
-	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	
-	    local label = new("TextLabel",{
-	        Parent = container,
-	        Size = UDim2.new(0.6,0,1,0),
-	        BackgroundTransparency=1,
-	        Text=name,
-	        TextXAlignment=Enum.TextXAlignment.Left,
-	        TextColor3=THEME.Text,
-	        Font=Enum.Font.Gotham,
-	        TextSize=14
-	    })
-	
-	    local btn = new("TextButton",{
-	        Parent = container,
-	        Size = UDim2.new(0.4,-4,1,0),
-	        Position = UDim2.new(0.6,4,0,0),
-	        Text="▼",
-	        BackgroundTransparency=1,
-	        TextColor3=THEME.Text,
-	        Font=Enum.Font.GothamBold,
-	        TextSize=14,
-	        ZIndex=3
-	    })
-	
-	    -- Create dropdown outside of container to avoid clip issues
-	    local dropdownFrame = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,0),
-	        Position = container.Position + UDim2.new(0,0,0,36),
-	        BackgroundTransparency=1,
-	        ClipsDescendants=false,
-	        ZIndex=2
-	    })
-	
-	    local scrollingFrame = new("ScrollingFrame",{
-	        Parent = dropdownFrame,
-	        Size = UDim2.new(1,0,1,0),
-	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        CanvasSize = UDim2.new(0,0,0,0),
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ClipsDescendants=false
-	    })
-	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
-	
-	    local optionButtons = {}
-	
-	    local function updateButtonText()
-	        if multi then
-	            if #selected == 0 then
-	                btn.Text = "▼"
-	            elseif #selected == 1 then
-	                btn.Text = selected[1]
-	            else
-	                btn.Text = table.concat(selected,", ").." …"
-	            end
-	        else
-	            btn.Text = selected[1] or "▼"
-	        end
-	    end
-	
-	    local function updateHighlights()
-	        for k,v in pairs(optionButtons) do
-	            if multi then
-	                v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
-	            else
-	                v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
-	            end
-	        end
-	    end
-	
-	    for i,option in ipairs(options) do
-	        local optBtn = new("TextButton",{
-	            Parent = scrollingFrame,
-	            Size = UDim2.new(1,0,0,28),
-	            Text = option,
-	            BackgroundColor3 = THEME.Button,
-	            TextColor3 = THEME.Text,
-	            Font = Enum.Font.Gotham,
-	            TextSize = 14,
-	            ZIndex = 2
-	        })
-	        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
-	        optionButtons[option] = optBtn
-	
-	        optBtn.MouseButton1Click:Connect(function()
-	            if multi then
-	                local found = false
-	                for j,v in ipairs(selected) do
-	                    if v == option then
-	                        table.remove(selected,j)
-	                        found = true
-	                        break
-	                    end
-	                end
-	                if not found then table.insert(selected, option) end
-	            else
-	                selected = {option}
-	                dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.2, true)
-	            end
-	            updateButtonText()
-	            updateHighlights()
-	            if data.Callback then pcall(data.Callback, selected) end
-	        end)
-	    end
-	
-	    btn.MouseButton1Click:Connect(function()
-	        if dropdownFrame.Size.Y.Offset > 0 then
-	            dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.2, true)
-	        else
-	            local total = math.min(#options, maxVisible) * 28
-	            dropdownFrame:TweenSize(UDim2.new(1,0,0,total), "Out", "Quad", 0.2, true)
-	        end
-	    end)
-	
-	    updateButtonText()
-	    updateHighlights()
-	
-	    return {
-	        Get = function() return multi and selected or selected[1] end,
-	        Set = function(_,val)
-	            if multi then
-	                selected = val
-	            else
-	                selected = {val}
-	            end
-	            updateButtonText()
-	            updateHighlights()
-	            if data.Callback then pcall(data.Callback, selected) end
-	        end
-	    }
-	end
+    data = data or {}
+    local name = data.Name or "Dropdown"
+    local options = data.Options or {}
+    if #options == 0 then return end
+    local multi = data.MultipleOptions or false
+    local selected = multi and {} or { data.CurrentOption or options[1] }
+    local maxVisible = data.MaxVisibleOptions or 5
+
+    local container = new("Frame", {
+        Parent = tabPanel,
+        Size = UDim2.new(1,-20,0,36),
+        BackgroundColor3 = THEME.Button,
+        ClipsDescendants = true
+    })
+    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+
+    local label = new("TextLabel",{
+        Parent = container,
+        Size = UDim2.new(0.6,0,1,0),
+        BackgroundTransparency=1,
+        Text=name,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextColor3=THEME.Text,
+        Font=Enum.Font.Gotham,
+        TextSize=14
+    })
+
+    local btn = new("TextButton",{
+        Parent = container,
+        Size = UDim2.new(0.4,-4,1,0),
+        Position = UDim2.new(0.6,4,0,0),
+        Text="▼",
+        BackgroundTransparency=1,
+        TextColor3=THEME.Text,
+        Font=Enum.Font.GothamBold,
+        TextSize=14,
+        ZIndex=3
+    })
+
+    local dropdownFrame = new("ScrollingFrame",{
+        Parent = container,
+        Size=UDim2.new(1,0,0,0),
+        Position=UDim2.new(0,0,1,2),
+        BackgroundColor3=THEME.Button,
+        Visible=false,
+        ScrollBarThickness=6,
+        ScrollingDirection=Enum.ScrollingDirection.Y,
+        ZIndex=2,
+        ClipsDescendants = true
+    })
+    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+
+    local function updateButtonText()
+        if multi then
+            if #selected == 0 then
+                btn.Text = "None"
+            elseif #selected == 1 then
+                btn.Text = selected[1]
+            else
+                btn.Text = selected[1].." + "..(#selected-1).." more"
+            end
+        else
+            btn.Text = selected[1] or "▼"
+        end
+    end
+    updateButtonText()
+
+    local optionButtons = {}
+
+    for i,option in ipairs(options) do
+        local optBtn = new("TextButton",{
+            Parent = dropdownFrame,
+            Size = UDim2.new(1,0,0,28),
+            Text = option,
+            BackgroundColor3 = THEME.Button,
+            TextColor3 = THEME.Text,
+            Font = Enum.Font.Gotham,
+            TextSize = 14,
+            ZIndex = 2
+        })
+        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
+        table.insert(optionButtons, optBtn)
+
+        local function updateHighlight()
+            if multi then
+                optBtn.BackgroundColor3 = (table.find(selected, option) and Color3.fromRGB(180,150,255)) or THEME.Button
+            else
+                optBtn.BackgroundColor3 = (selected[1]==option and Color3.fromRGB(180,150,255)) or THEME.Button
+            end
+        end
+        updateHighlight()
+
+        optBtn.MouseButton1Click:Connect(function()
+            if multi then
+                local found = table.find(selected, option)
+                if found then
+                    table.remove(selected, found)
+                else
+                    table.insert(selected, option)
+                end
+            else
+                selected = {option}
+                dropdownFrame.Visible = false
+            end
+            updateButtonText()
+            for _,btn in ipairs(optionButtons) do
+                btn.BackgroundColor3 = THEME.Button
+            end
+            for _,btn in ipairs(optionButtons) do
+                local val = btn.Text
+                if multi and table.find(selected, val) then
+                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                elseif not multi and selected[1]==val then
+                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                end
+            end
+            if data.Callback then pcall(data.Callback, selected) end
+        end)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        local open = not dropdownFrame.Visible
+        dropdownFrame.Visible = open
+        local totalHeight = math.min(#options, maxVisible) * 28
+        dropdownFrame:TweenSize(UDim2.new(1,0,0,open and totalHeight or 0), "Out", "Quad", 0.25, true)
+    end)
+
+    return {
+        Get = function() return multi and selected or selected[1] end,
+        Set = function(_,val)
+            if multi then
+                selected = val
+            else
+                selected = {val}
+            end
+            updateButtonText()
+            for _,btn in ipairs(optionButtons) do
+                local valText = btn.Text
+                if multi and table.find(selected, valText) then
+                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                elseif not multi and selected[1]==valText then
+                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                else
+                    btn.BackgroundColor3 = THEME.Button
+                end
+            end
+            if data.Callback then pcall(data.Callback, selected) end
+        end
+    }
+end
 
 -- Keybind
 function TabObj:CreateKeybind(data)
