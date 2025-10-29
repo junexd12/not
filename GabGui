@@ -244,8 +244,7 @@ function TabObj:CreateDropdown(data)
 	    local container = new("Frame", {
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button,
-	        ClipsDescendants = true
+	        BackgroundColor3 = THEME.Button
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
@@ -272,22 +271,24 @@ function TabObj:CreateDropdown(data)
 	        ZIndex=3
 	    })
 	
+	    -- Create dropdown outside of container to avoid clip issues
 	    local dropdownFrame = new("Frame",{
-	        Parent = container,
-	        Size=UDim2.new(1,0,0,0),
-	        Position=UDim2.new(0,0,1,2),
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,0),
+	        Position = container.Position + UDim2.new(0,0,0,36),
 	        BackgroundTransparency=1,
-	        ClipsDescendants=true
+	        ClipsDescendants=false,
+	        ZIndex=2
 	    })
 	
 	    local scrollingFrame = new("ScrollingFrame",{
 	        Parent = dropdownFrame,
-	        Size=UDim2.new(1,0,1,0),
+	        Size = UDim2.new(1,0,1,0),
 	        BackgroundColor3 = THEME.Button,
 	        ScrollBarThickness = 6,
 	        CanvasSize = UDim2.new(0,0,0,0),
 	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ClipsDescendants=true
+	        ClipsDescendants=false
 	    })
 	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
@@ -317,7 +318,6 @@ function TabObj:CreateDropdown(data)
 	        end
 	    end
 	
-	    -- Add option buttons
 	    for i,option in ipairs(options) do
 	        local optBtn = new("TextButton",{
 	            Parent = scrollingFrame,
@@ -345,13 +345,10 @@ function TabObj:CreateDropdown(data)
 	                if not found then table.insert(selected, option) end
 	            else
 	                selected = {option}
-	            end
-	
-	            updateButtonText()
-	            updateHighlights()
-	            if not multi then
 	                dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.2, true)
 	            end
+	            updateButtonText()
+	            updateHighlights()
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
@@ -365,7 +362,6 @@ function TabObj:CreateDropdown(data)
 	        end
 	    end)
 	
-	    -- initialize
 	    updateButtonText()
 	    updateHighlights()
 	
