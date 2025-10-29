@@ -145,11 +145,11 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-	function TabObj:CreateDropdown(data)
+function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
-	    if #options == 0 then return end
+	    if #options == 0 then warn("Dropdown requires at least one option"); return end
 	    local multi = data.MultipleOptions or false
 	    local selected = {}
 	
@@ -163,29 +163,39 @@ function GabGui:CreateWindow(opts)
 	    end
 	
 	    local maxVisible = data.MaxVisibleOptions or #options
+	    local optionHeight = 28
+	    local totalOptionHeight = math.min(#options, maxVisible) * optionHeight
 	
-	    -- Container (non-draggable)
+	    -- Container (non-draggable, isolated from window drag)
 	    local container = new("Frame",{
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
 	        BackgroundColor3 = THEME.Button,
 	        ClipsDescendants = true,
-	        LayoutOrder = data.LayoutOrder or 0
+	        LayoutOrder = data.LayoutOrder or 0,
+	        Active = true, -- Keep for button interactions, but block drag
+	        Draggable = false
 	    })
-	    container.Active = true -- Keep Active true for button clicks
-	    container.Draggable = false -- Redundant, but keep it
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
-	    -- Prevent dragging using InputBegan and InputEnded
+	    -- CRITICAL FIX: Block container input from triggering window drag
 	    container.InputBegan:Connect(function(input)
 	        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	            -- Stop input from reaching the main draggable window
 	            input.Handled = true
-	        end
-	    end)
-	
-	    container.InputEnded:Connect(function(input)
-	        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-	            input.Handled = true
+	            -- Temporarily disable window drag while interacting with dropdown
+	            local mainWindow = container:FindFirstAncestorWhichIsA("Frame")
+	            if mainWindow and mainWindow.Draggable then
+	                mainWindow.Draggable = false
+	                -- Re-enable window drag after input ends
+	                task.spawn(function()
+	                    input:GetPropertyChangedSignal("UserInputState"):Wait()
+	                    if input.UserInputState == Enum.UserInputState.End then
+	                        task.wait(0.1) -- Prevent immediate re-drag conflict
+	                        mainWindow.Draggable = true
+	                    end
+	                end)
+	            end
 	        end
 	    end)
 	
@@ -206,55 +216,57 @@ function GabGui:CreateWindow(opts)
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
-	        Text = table.concat(selected,", ").." ▼", -- set the text
+	        Text = table.concat(selected,", ").." ▼",
 	        BackgroundTransparency = 1,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
 	        TextSize = 14
 	    })
-	    -- set the initial text
-	    btn.Text = table.concat(selected,", ").." ▼" 
 	
-	    -- Options frame (attached)
+	    -- Options frame (fixed spacing, no overlap)
 	    local dropdownFrame = new("Frame",{
 	        Parent = container,
-	        Size = UDim2.new(1,0,0,0),
+	        Size = UDim2.new(1,0,0,totalOptionHeight),
 	        Position = UDim2.new(0,0,0,36),
-	        BackgroundColor3 = THEME.Button
+	        BackgroundColor3 = THEME.Button,
+	        Visible = false
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
-	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
+	    local layout = new("UIListLayout",{
+	        Parent = dropdownFrame,
+	        SortOrder = Enum.SortOrder.LayoutOrder,
+	        Padding = UDim.new(0,2),
+	        VerticalAlignment = Enum.VerticalAlignment.Top
+	    })
+	    -- Force layout to calculate positions immediately
+	    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Wait()
 	
 	    local open = false
 	    local function toggleDropdown()
 	        open = not open
-	        local totalHeight = math.min(#options, maxVisible) * 28
-	        dropdownFrame.Visible = true
+	        dropdownFrame.Visible = open
+	        -- Tween container without breaking layout
 	        container:TweenSize(
-	            open and UDim2.new(1,-20,0,36 + totalHeight) or UDim2.new(1,-20,0,36),
+	            open and UDim2.new(1,-20,0,36 + totalOptionHeight) or UDim2.new(1,-20,0,36),
 	            "Out",
 	            "Quad",
 	            0.25,
-	            true,
-	            function()
-	                if not open then
-	                    dropdownFrame.Visible = false
-	                end
-	            end
+	            true
 	        )
 	    end
 	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Create option buttons
+	    -- Create option buttons (fixed spacing, no overlap)
 	    for _,opt in ipairs(options) do
 	        local item = new("TextButton",{
 	            Parent = dropdownFrame,
-	            Size = UDim2.new(1,0,0,28),
+	            Size = UDim2.new(1,0,0,optionHeight),
 	            Text=opt,
 	            BackgroundColor3=THEME.Button,
 	            TextColor3=THEME.Text,
 	            Font=Enum.Font.Gotham,
-	            TextSize=14
+	            TextSize=14,
+	            LayoutOrder = _
 	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
 	
