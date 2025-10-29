@@ -153,14 +153,10 @@ function TabObj:CreateDropdown(data)
 	    local multiple = data.MultipleOptions or false
 	    local selected = {}
 	
-	    -- Preselect CurrentOption if provided
+	    -- Preselect CurrentOption
 	    if data.CurrentOption then
 	        if multiple then
-	            if type(data.CurrentOption) == "table" then
-	                selected = data.CurrentOption
-	            else
-	                selected = {data.CurrentOption}
-	            end
+	            selected = type(data.CurrentOption) == "table" and data.CurrentOption or {data.CurrentOption}
 	        else
 	            selected = {tostring(data.CurrentOption)}
 	        end
@@ -168,9 +164,9 @@ function TabObj:CreateDropdown(data)
 	        selected = {options[1]}
 	    end
 	
-	    local maxVisible = data.MaxVisibleOptions or 5
+	    local maxVisible = data.MaxVisibleOptions or #options
 	
-	    -- Dropdown button container
+	    -- Main dropdown container
 	    local container = new("Frame",{
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
@@ -178,7 +174,7 @@ function TabObj:CreateDropdown(data)
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	
+	    
 	    local label = new("TextLabel",{
 	        Parent = container,
 	        Size = UDim2.new(0.7,0,1,0),
@@ -202,17 +198,13 @@ function TabObj:CreateDropdown(data)
 	        ZIndex = 5
 	    })
 	
-	    -- Options container (attached to button container)
-	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = container,            -- attach to container!
+	    -- Options frame inside the main container (expands down)
+	    local dropdownFrame = new("Frame",{
+	        Parent = container,
 	        Size = UDim2.new(1,0,0,0),
 	        Position = UDim2.new(0,0,1,2),
 	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        Visible = false,
-	        ClipsDescendants = true,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	        ZIndex = 10
+	        ClipsDescendants = true
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
@@ -220,16 +212,12 @@ function TabObj:CreateDropdown(data)
 	    local open = false
 	    local function toggleDropdown()
 	        open = not open
-	        dropdownFrame.Visible = true
 	        local totalHeight = math.min(#options, maxVisible) * 28
-	        dropdownFrame:TweenSize(UDim2.new(1,0,0, open and totalHeight or 0), "Out", "Quad", 0.25, true, function()
-	            if not open then dropdownFrame.Visible = false end
-	        end)
+	        dropdownFrame:TweenSize(UDim2.new(1,0,0, open and totalHeight or 0), "Out", "Quad", 0.25, true)
 	    end
-	
 	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Create option buttons
+	    -- Add option buttons inside dropdownFrame
 	    for _,opt in ipairs(options) do
 	        local item = new("TextButton",{
 	            Parent = dropdownFrame,
@@ -238,18 +226,12 @@ function TabObj:CreateDropdown(data)
 	            BackgroundColor3 = THEME.Button,
 	            TextColor3 = THEME.Text,
 	            Font = Enum.Font.Gotham,
-	            TextSize = 14,
-	            ZIndex = 11
+	            TextSize = 14
 	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
 	
-	        -- Highlight on hover
-	        item.MouseEnter:Connect(function()
-	            item.BackgroundColor3 = Color3.fromRGB(70,70,80)
-	        end)
-	        item.MouseLeave:Connect(function()
-	            item.BackgroundColor3 = THEME.Button
-	        end)
+	        item.MouseEnter:Connect(function() item.BackgroundColor3 = Color3.fromRGB(70,70,80) end)
+	        item.MouseLeave:Connect(function() item.BackgroundColor3 = THEME.Button end)
 	
 	        item.MouseButton1Click:Connect(function()
 	            if multiple then
@@ -264,7 +246,7 @@ function TabObj:CreateDropdown(data)
 	                if not found then table.insert(selected,opt) end
 	            else
 	                selected = {opt}
-	                toggleDropdown()
+	                toggleDropdown() -- auto-close for single select
 	            end
 	            btn.Text = table.concat(selected,", ").." ▼"
 	            if data.Callback then pcall(data.Callback, selected) end
