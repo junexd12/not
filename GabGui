@@ -245,9 +245,10 @@ function TabObj:CreateDropdown(data)
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
 	        BackgroundColor3 = THEME.Button,
+	        ClipsDescendants = true
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	    
+	
 	    local label = new("TextLabel",{
 	        Parent = container,
 	        Size = UDim2.new(0.6,0,1,0),
@@ -271,18 +272,24 @@ function TabObj:CreateDropdown(data)
 	        ZIndex=3
 	    })
 	
-	    local dropdownFrame = new("ScrollingFrame",{
+	    local dropdownFrame = new("Frame",{
 	        Parent = container,
 	        Size=UDim2.new(1,0,0,0),
 	        Position=UDim2.new(0,0,1,2),
-	        BackgroundColor3=THEME.Button,
-	        Visible=false,
-	        ScrollBarThickness=6,
-	        ScrollingDirection=Enum.ScrollingDirection.Y,
-	        ZIndex=2,
-	        ClipsDescendants = true
+	        BackgroundTransparency=1,
+	        ClipsDescendants=true
 	    })
-	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+	
+	    local scrollingFrame = new("ScrollingFrame",{
+	        Parent = dropdownFrame,
+	        Size=UDim2.new(1,0,1,0),
+	        BackgroundColor3 = THEME.Button,
+	        ScrollBarThickness = 6,
+	        CanvasSize = UDim2.new(0,0,0,0),
+	        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	        ClipsDescendants=true
+	    })
+	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
 	    local optionButtons = {}
 	
@@ -300,10 +307,20 @@ function TabObj:CreateDropdown(data)
 	        end
 	    end
 	
+	    local function updateHighlights()
+	        for k,v in pairs(optionButtons) do
+	            if multi then
+	                v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
+	            else
+	                v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
+	            end
+	        end
+	    end
+	
 	    -- Add option buttons
 	    for i,option in ipairs(options) do
 	        local optBtn = new("TextButton",{
-	            Parent = dropdownFrame,
+	            Parent = scrollingFrame,
 	            Size = UDim2.new(1,0,0,28),
 	            Text = option,
 	            BackgroundColor3 = THEME.Button,
@@ -328,42 +345,29 @@ function TabObj:CreateDropdown(data)
 	                if not found then table.insert(selected, option) end
 	            else
 	                selected = {option}
-	                dropdownFrame.Visible = false
-	            end
-	
-	            -- Update highlights
-	            for k,v in pairs(optionButtons) do
-	                if multi then
-	                    v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
-	                else
-	                    v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
-	                end
 	            end
 	
 	            updateButtonText()
+	            updateHighlights()
+	            if not multi then
+	                dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.2, true)
+	            end
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
 	
 	    btn.MouseButton1Click:Connect(function()
-	        local visible = dropdownFrame.Size.Y.Offset > 0
-	        if visible then
-	            dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
+	        if dropdownFrame.Size.Y.Offset > 0 then
+	            dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.2, true)
 	        else
-	            local total = math.min(#options * 28, maxVisible * 28)
-	            dropdownFrame:TweenSize(UDim2.new(1,0,0,total), "Out", "Quad", 0.25, true)
+	            local total = math.min(#options, maxVisible) * 28
+	            dropdownFrame:TweenSize(UDim2.new(1,0,0,total), "Out", "Quad", 0.2, true)
 	        end
 	    end)
 	
-	    -- Initialize highlights and button text
-	    for k,v in pairs(optionButtons) do
-	        if multi then
-	            v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
-	        else
-	            v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
-	        end
-	    end
+	    -- initialize
 	    updateButtonText()
+	    updateHighlights()
 	
 	    return {
 	        Get = function() return multi and selected or selected[1] end,
@@ -373,14 +377,8 @@ function TabObj:CreateDropdown(data)
 	            else
 	                selected = {val}
 	            end
-	            for k,v in pairs(optionButtons) do
-	                if multi then
-	                    v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
-	                else
-	                    v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
-	                end
-	            end
 	            updateButtonText()
+	            updateHighlights()
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end
 	    }
