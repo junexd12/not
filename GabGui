@@ -241,11 +241,6 @@ function TabObj:CreateDropdown(data)
 	    local selected = multi and {} or { data.CurrentOption or options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Ensure tabPanel has UIListLayout for push-down behavior
-	    if not tabPanel:FindFirstChild("UIListLayout") then
-	        local layout = new("UIListLayout",{Parent=tabPanel, Padding=UDim.new(0,8), SortOrder=Enum.SortOrder.LayoutOrder})
-	    end
-	
 	    local container = new("Frame", {
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
@@ -280,29 +275,33 @@ function TabObj:CreateDropdown(data)
 	        CaptureTouch=true
 	    })
 	
-	    local dropdownFrame = new("ScrollingFrame",{
+	    -- Dropdown options container
+	    local optionsContainer = new("Frame",{
 	        Parent = container,
-	        Size=UDim2.new(1,0,0,0),
-	        BackgroundColor3=THEME.Button,
-	        Visible=false,
-	        ScrollBarThickness=6,
-	        ScrollingDirection=Enum.ScrollingDirection.Y,
-	        ZIndex=2,
-	        AutomaticCanvasSize=Enum.AutomaticSize.Y
+	        Size = UDim2.new(1,0,0,0),
+	        Position = UDim2.new(0,0,1,0),
+	        BackgroundTransparency=1,
+	        ClipsDescendants=false
 	    })
-	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+	    local scrollingFrame = new("ScrollingFrame",{
+	        Parent = optionsContainer,
+	        Size = UDim2.new(1,0,1,0),
+	        BackgroundColor3 = THEME.Button,
+	        ScrollBarThickness = 6,
+	        AutomaticCanvasSize = Enum.AutomaticSize.Y
+	    })
+	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
-	    -- Option buttons
+	    -- Add option buttons
 	    for i,option in ipairs(options) do
 	        local optBtn = new("TextButton",{
-	            Parent = dropdownFrame,
+	            Parent = scrollingFrame,
 	            Size = UDim2.new(1,0,0,28),
 	            Text = option,
 	            BackgroundColor3 = THEME.Button,
 	            TextColor3 = THEME.Text,
 	            Font = Enum.Font.Gotham,
-	            TextSize = 14,
-	            ZIndex = 2
+	            TextSize = 14
 	        })
 	        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
 	
@@ -320,17 +319,25 @@ function TabObj:CreateDropdown(data)
 	            else
 	                selected = {option}
 	                btn.Text = option
-	                dropdownFrame.Visible = false
+	                -- collapse
+	                dropdownOpen(false)
 	            end
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
 	
-	    -- Toggle dropdown visibility
-	    btn.MouseButton1Click:Connect(function()
-	        dropdownFrame.Visible = not dropdownFrame.Visible
+	    local dropdownOpen = function(open)
 	        local totalHeight = math.min(#options, maxVisible) * 28
-	        dropdownFrame.Size = dropdownFrame.Visible and UDim2.new(1,0,0,totalHeight) or UDim2.new(1,0,0,0)
+	        if open then
+	            optionsContainer:TweenSize(UDim2.new(1,0,0,totalHeight), "Out", "Quad", 0.25, true)
+	        else
+	            optionsContainer:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
+	        end
+	    end
+	
+	    btn.MouseButton1Click:Connect(function()
+	        local visible = optionsContainer.Size.Y.Offset > 0
+	        dropdownOpen(not visible)
 	    end)
 	
 	    return {
