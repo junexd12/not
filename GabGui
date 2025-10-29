@@ -245,10 +245,9 @@ function TabObj:CreateDropdown(data)
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
 	        BackgroundColor3 = THEME.Button,
-	        ClipsDescendants = true
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	
+	    
 	    local label = new("TextLabel",{
 	        Parent = container,
 	        Size = UDim2.new(0.6,0,1,0),
@@ -269,30 +268,24 @@ function TabObj:CreateDropdown(data)
 	        TextColor3=THEME.Text,
 	        Font=Enum.Font.GothamBold,
 	        TextSize=14,
-	        ZIndex=3,
-	        Active=true,
-	        CaptureMouse=true,
-	        CaptureTouch=true
+	        ZIndex=3
 	    })
 	
-	    -- Dropdown options container
-	    local optionsContainer = new("Frame",{
+	    local dropdownFrame = new("ScrollingFrame",{
 	        Parent = container,
-	        Size = UDim2.new(1,0,0,0),
-	        Position = UDim2.new(0,0,1,0),
-	        BackgroundTransparency=1,
-	        ClipsDescendants=false
+	        Size=UDim2.new(1,0,0,0),
+	        Position=UDim2.new(0,0,1,2),
+	        BackgroundColor3=THEME.Button,
+	        Visible=false,
+	        ScrollBarThickness=6,
+	        ScrollingDirection=Enum.ScrollingDirection.Y,
+	        ZIndex=2,
+	        ClipsDescendants = true
 	    })
-	    local scrollingFrame = new("ScrollingFrame",{
-	        Parent = optionsContainer,
-	        Size = UDim2.new(1,0,1,0),
-	        BackgroundColor3 = THEME.Button,
-	        ScrollBarThickness = 6,
-	        AutomaticCanvasSize = Enum.AutomaticSize.Y
-	    })
-	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
-	    -- Highlight selected options and update button text
+	    local optionButtons = {}
+	
 	    local function updateButtonText()
 	        if multi then
 	            if #selected == 0 then
@@ -308,16 +301,16 @@ function TabObj:CreateDropdown(data)
 	    end
 	
 	    -- Add option buttons
-	    local optionButtons = {}
 	    for i,option in ipairs(options) do
 	        local optBtn = new("TextButton",{
-	            Parent = scrollingFrame,
+	            Parent = dropdownFrame,
 	            Size = UDim2.new(1,0,0,28),
 	            Text = option,
 	            BackgroundColor3 = THEME.Button,
 	            TextColor3 = THEME.Text,
 	            Font = Enum.Font.Gotham,
-	            TextSize = 14
+	            TextSize = 14,
+	            ZIndex = 2
 	        })
 	        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
 	        optionButtons[option] = optBtn
@@ -335,8 +328,9 @@ function TabObj:CreateDropdown(data)
 	                if not found then table.insert(selected, option) end
 	            else
 	                selected = {option}
-	                dropdownOpen(false)
+	                dropdownFrame.Visible = false
 	            end
+	
 	            -- Update highlights
 	            for k,v in pairs(optionButtons) do
 	                if multi then
@@ -345,23 +339,20 @@ function TabObj:CreateDropdown(data)
 	                    v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
 	                end
 	            end
+	
 	            updateButtonText()
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
 	
-	    local dropdownOpen = function(open)
-	        local totalHeight = math.min(#options, maxVisible) * 28
-	        if open then
-	            optionsContainer:TweenSize(UDim2.new(1,0,0,totalHeight), "Out", "Quad", 0.25, true)
-	        else
-	            optionsContainer:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
-	        end
-	    end
-	
 	    btn.MouseButton1Click:Connect(function()
-	        local visible = optionsContainer.Size.Y.Offset > 0
-	        dropdownOpen(not visible)
+	        local visible = dropdownFrame.Size.Y.Offset > 0
+	        if visible then
+	            dropdownFrame:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
+	        else
+	            local total = math.min(#options * 28, maxVisible * 28)
+	            dropdownFrame:TweenSize(UDim2.new(1,0,0,total), "Out", "Quad", 0.25, true)
+	        end
 	    end)
 	
 	    -- Initialize highlights and button text
