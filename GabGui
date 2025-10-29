@@ -150,66 +150,42 @@ function TabObj:CreateDropdown(data)
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
 	    if #options == 0 then return end
-	    local multiple = data.MultipleOptions or false
-	    local selected = {}
-	
-	    if data.CurrentOption then
-	        if multiple then
-	            selected = type(data.CurrentOption) == "table" and data.CurrentOption or {data.CurrentOption}
-	        else
-	            selected = {tostring(data.CurrentOption)}
-	        end
-	    else
-	        selected = {options[1]}
-	    end
-	
+	    local multi = data.MultipleOptions or false
+	    local selected = multi and {} or { options[1] }
 	    local maxVisible = data.MaxVisibleOptions or #options
 	
-	    -- Parent container holds button + options
-	    local parentContainer = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36), -- starts with button height
-	        BackgroundTransparency = 1,
-	        LayoutOrder = data.LayoutOrder or 0
-	    })
-	
-	    -- Dropdown button
+	    -- Parent container (will expand)
 	    local container = new("Frame",{
-	        Parent = parentContainer,
-	        Size = UDim2.new(1,0,0,36),
-	        BackgroundColor3 = THEME.Button
+	        Parent=tabPanel,
+	        Size=UDim2.new(1,-20,0,36),
+	        BackgroundTransparency=0,
+	        BackgroundColor3=THEME.Button,
+	        ClipsDescendants = true,
+	        LayoutOrder = data.LayoutOrder or 0
 	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
-	    local label = new("TextLabel",{
-	        Parent = container,
-	        Size = UDim2.new(0.7,0,1,0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14,
-	        TextXAlignment = Enum.TextXAlignment.Left
-	    })
+	    -- Label
+	    local label = new("TextLabel",{Parent=container, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
 	
+	    -- Dropdown button
 	    local btn = new("TextButton",{
-	        Parent = container,
-	        Size = UDim2.new(0.3,-8,1,0),
-	        Position = UDim2.new(0.7,4,0,0),
-	        Text = table.concat(selected,", ").." ▼",
-	        BackgroundTransparency = 1,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.GothamBold,
-	        TextSize = 14
+	        Parent=container,
+	        Size=UDim2.new(0.3,-8,1,0),
+	        Position=UDim2.new(0.7,4,0,0),
+	        Text = selected[1] or "▼",
+	        BackgroundTransparency=1,
+	        TextColor3=THEME.Text,
+	        Font=Enum.Font.GothamBold,
+	        TextSize=14
 	    })
 	
-	    -- Options container (inside parent)
+	    -- Options frame inside container
 	    local dropdownFrame = new("Frame",{
-	        Parent = parentContainer,
-	        Size = UDim2.new(1,0,0,0), -- height animates
-	        Position = UDim2.new(0,0,0,36),
-	        BackgroundColor3 = THEME.Button,
-	        ClipsDescendants = true
+	        Parent=container,
+	        Size=UDim2.new(1,0,0,0),
+	        Position=UDim2.new(0,0,0,36),
+	        BackgroundColor3=THEME.Button
 	    })
 	    new("UICorner",{Parent=dropdownFrame, CornerRadius=UDim.new(0,8)})
 	    local layout = new("UIListLayout",{Parent=dropdownFrame, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)})
@@ -218,21 +194,26 @@ function TabObj:CreateDropdown(data)
 	    local function toggleDropdown()
 	        open = not open
 	        local totalHeight = math.min(#options, maxVisible) * 28
-	        dropdownFrame:TweenSize(UDim2.new(1,0,0, open and totalHeight or 0), "Out", "Quad", 0.25, true)
-	        parentContainer:TweenSize(UDim2.new(1,0,0,36 + (open and totalHeight or 0)), "Out", "Quad", 0.25, true)
+	        container:TweenSize(
+	            open and UDim2.new(1,-20,0,36 + totalHeight) or UDim2.new(1,-20,0,36),
+	            "Out",
+	            "Quad",
+	            0.25,
+	            true
+	        )
 	    end
 	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Add option buttons
+	    -- Option buttons
 	    for _,opt in ipairs(options) do
 	        local item = new("TextButton",{
-	            Parent = dropdownFrame,
-	            Size = UDim2.new(1,0,0,28),
-	            Text = opt,
-	            BackgroundColor3 = THEME.Button,
-	            TextColor3 = THEME.Text,
-	            Font = Enum.Font.Gotham,
-	            TextSize = 14
+	            Parent=dropdownFrame,
+	            Size=UDim2.new(1,0,0,28),
+	            Text=opt,
+	            BackgroundColor3=THEME.Button,
+	            TextColor3=THEME.Text,
+	            Font=Enum.Font.Gotham,
+	            TextSize=14
 	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
 	
@@ -240,26 +221,23 @@ function TabObj:CreateDropdown(data)
 	        item.MouseLeave:Connect(function() item.BackgroundColor3 = THEME.Button end)
 	
 	        item.MouseButton1Click:Connect(function()
-	            if multiple then
-	                local found = false
-	                for i,v in ipairs(selected) do
-	                    if v == opt then
-	                        table.remove(selected,i)
-	                        found = true
-	                        break
-	                    end
+	            if multi then
+	                if table.find(selected,opt) then
+	                    table.remove(selected,table.find(selected,opt))
+	                else
+	                    table.insert(selected,opt)
 	                end
-	                if not found then table.insert(selected,opt) end
 	            else
 	                selected = {opt}
-	                toggleDropdown() -- auto-close for single select
+	                btn.Text = opt
+	                toggleDropdown() -- auto-close
 	            end
 	            btn.Text = table.concat(selected,", ").." ▼"
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
 	
-	    return {Get = function() return selected end}
+	    return {Get=function() return selected end}
 	end
 	
 	---------------------------------------------------------------------------------------------
