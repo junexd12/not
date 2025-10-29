@@ -145,7 +145,7 @@ function GabGui:CreateWindow(opts)
 	end
 	
 	-- Dropdown
-function TabObj:CreateDropdown(data)
+	function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
@@ -172,9 +172,22 @@ function TabObj:CreateDropdown(data)
 	        ClipsDescendants = true,
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
-	    container.Active = false -- prevent dragging of the container
-	    container.Draggable = false
+	    container.Active = true -- Keep Active true for button clicks
+	    container.Draggable = false -- Redundant, but keep it
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
+	
+	    -- Prevent dragging using InputBegan and InputEnded
+	    container.InputBegan:Connect(function(input)
+	        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	            input.Handled = true
+	        end
+	    end)
+	
+	    container.InputEnded:Connect(function(input)
+	        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	            input.Handled = true
+	        end
+	    end)
 	
 	    -- Label
 	    local label = new("TextLabel",{
