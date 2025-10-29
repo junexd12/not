@@ -232,6 +232,7 @@ function GabGui:CreateWindow(opts)
         end
 
         -- Dropdown
+-- Dropdown
 function TabObj:CreateDropdown(data)
     data = data or {}
     local name = data.Name or "Dropdown"
@@ -245,7 +246,6 @@ function TabObj:CreateDropdown(data)
         Parent = tabPanel,
         Size = UDim2.new(1,-20,0,36),
         BackgroundColor3 = THEME.Button,
-        ClipsDescendants = true
     })
     new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 
@@ -272,18 +272,24 @@ function TabObj:CreateDropdown(data)
         ZIndex=3
     })
 
-    local dropdownFrame = new("ScrollingFrame",{
-        Parent = container,
-        Size=UDim2.new(1,0,0,0),
-        Position=UDim2.new(0,0,1,2),
-        BackgroundColor3=THEME.Button,
-        Visible=false,
-        ScrollBarThickness=6,
-        ScrollingDirection=Enum.ScrollingDirection.Y,
-        ZIndex=2,
-        ClipsDescendants = true
+    -- Container for options (pushes buttons below)
+    local optionsContainer = new("Frame",{
+        Parent = tabPanel,
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,36),
+        BackgroundTransparency=1,
+        ClipsDescendants=true
     })
-    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+    local scrollingFrame = new("ScrollingFrame",{
+        Parent = optionsContainer,
+        Size = UDim2.new(1,0,1,0),
+        BackgroundColor3 = THEME.Button,
+        ScrollBarThickness = 6,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
+    })
+    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
+
+    local optionButtons = {}
 
     local function updateButtonText()
         if multi then
@@ -300,18 +306,15 @@ function TabObj:CreateDropdown(data)
     end
     updateButtonText()
 
-    local optionButtons = {}
-
     for i,option in ipairs(options) do
         local optBtn = new("TextButton",{
-            Parent = dropdownFrame,
+            Parent = scrollingFrame,
             Size = UDim2.new(1,0,0,28),
             Text = option,
             BackgroundColor3 = THEME.Button,
             TextColor3 = THEME.Text,
             Font = Enum.Font.Gotham,
-            TextSize = 14,
-            ZIndex = 2
+            TextSize = 14
         })
         new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
         table.insert(optionButtons, optBtn)
@@ -335,29 +338,30 @@ function TabObj:CreateDropdown(data)
                 end
             else
                 selected = {option}
-                dropdownFrame.Visible = false
+                toggleDropdown(false)
             end
             updateButtonText()
-            for _,btn in ipairs(optionButtons) do
-                btn.BackgroundColor3 = THEME.Button
-            end
-            for _,btn in ipairs(optionButtons) do
-                local val = btn.Text
+            for _,b in ipairs(optionButtons) do
+                local val = b.Text
                 if multi and table.find(selected, val) then
-                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                    b.BackgroundColor3 = Color3.fromRGB(180,150,255)
                 elseif not multi and selected[1]==val then
-                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                    b.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                else
+                    b.BackgroundColor3 = THEME.Button
                 end
             end
             if data.Callback then pcall(data.Callback, selected) end
         end)
     end
 
-    btn.MouseButton1Click:Connect(function()
-        local open = not dropdownFrame.Visible
-        dropdownFrame.Visible = open
+    local function toggleDropdown(open)
         local totalHeight = math.min(#options, maxVisible) * 28
-        dropdownFrame:TweenSize(UDim2.new(1,0,0,open and totalHeight or 0), "Out", "Quad", 0.25, true)
+        optionsContainer:TweenSize(UDim2.new(1,0,0,open and totalHeight or 0), "Out", "Quad", 0.25, true)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        toggleDropdown(optionsContainer.Size.Y.Offset == 0)
     end)
 
     return {
@@ -369,14 +373,14 @@ function TabObj:CreateDropdown(data)
                 selected = {val}
             end
             updateButtonText()
-            for _,btn in ipairs(optionButtons) do
-                local valText = btn.Text
-                if multi and table.find(selected, valText) then
-                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
-                elseif not multi and selected[1]==valText then
-                    btn.BackgroundColor3 = Color3.fromRGB(180,150,255)
+            for _,b in ipairs(optionButtons) do
+                local val = b.Text
+                if multi and table.find(selected, val) then
+                    b.BackgroundColor3 = Color3.fromRGB(180,150,255)
+                elseif not multi and selected[1]==val then
+                    b.BackgroundColor3 = Color3.fromRGB(180,150,255)
                 else
-                    btn.BackgroundColor3 = THEME.Button
+                    b.BackgroundColor3 = THEME.Button
                 end
             end
             if data.Callback then pcall(data.Callback, selected) end
