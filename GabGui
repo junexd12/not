@@ -264,32 +264,35 @@ function TabObj:CreateDropdown(data)
 	        Parent = container,
 	        Size = UDim2.new(0.4,-4,1,0),
 	        Position = UDim2.new(0.6,4,0,0),
-	        Text=selected[1] or "▼",
+	        Text="▼",
 	        BackgroundTransparency=1,
 	        TextColor3=THEME.Text,
 	        Font=Enum.Font.GothamBold,
 	        TextSize=14,
-	        ZIndex=3
+	        ZIndex=3,
+	        Active=true,
+	        CaptureMouse=true,
+	        CaptureTouch=true
 	    })
 	
 	    -- Dropdown options container
 	    local optionsContainer = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,0),
+	        Parent = container,
+	        Size = UDim2.new(1,0,0,0),
+	        Position = UDim2.new(0,0,1,0),
 	        BackgroundTransparency=1,
-	        ClipsDescendants=true,
-	        Position = UDim2.new(0,10,0,container.Position.Y.Offset+container.Size.Y.Offset)
+	        ClipsDescendants=false
 	    })
 	    local scrollingFrame = new("ScrollingFrame",{
 	        Parent = optionsContainer,
 	        Size = UDim2.new(1,0,1,0),
 	        BackgroundColor3 = THEME.Button,
 	        ScrollBarThickness = 6,
-	        ClipsDescendants = true,
 	        AutomaticCanvasSize = Enum.AutomaticSize.Y
 	    })
 	    local listLayout = new("UIListLayout",{Parent=scrollingFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
+	    -- Highlight selected options and update button text
 	    local function updateButtonText()
 	        if multi then
 	            if #selected == 0 then
@@ -300,11 +303,12 @@ function TabObj:CreateDropdown(data)
 	                btn.Text = table.concat(selected,", ").." …"
 	            end
 	        else
-	            btn.Text = selected[1]
+	            btn.Text = selected[1] or "▼"
 	        end
 	    end
 	
 	    -- Add option buttons
+	    local optionButtons = {}
 	    for i,option in ipairs(options) do
 	        local optBtn = new("TextButton",{
 	            Parent = scrollingFrame,
@@ -316,22 +320,7 @@ function TabObj:CreateDropdown(data)
 	            TextSize = 14
 	        })
 	        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
-	
-	        local function updateHighlight()
-	            if multi then
-	                if table.find(selected, option) then
-	                    optBtn.BackgroundColor3 = Color3.fromRGB(180,0,255) -- light purple
-	                    optBtn.TextColor3 = Color3.fromRGB(255,255,255)
-	                else
-	                    optBtn.BackgroundColor3 = THEME.Button
-	                    optBtn.TextColor3 = THEME.Text
-	                end
-	            else
-	                optBtn.BackgroundColor3 = THEME.Button
-	                optBtn.TextColor3 = THEME.Text
-	            end
-	        end
-	        updateHighlight()
+	        optionButtons[option] = optBtn
 	
 	        optBtn.MouseButton1Click:Connect(function()
 	            if multi then
@@ -348,20 +337,15 @@ function TabObj:CreateDropdown(data)
 	                selected = {option}
 	                dropdownOpen(false)
 	            end
-	            updateButtonText()
-	            for _,btnOpt in ipairs(scrollingFrame:GetChildren()) do
-	                if btnOpt:IsA("TextButton") then
-	                    if multi then
-	                        if table.find(selected, btnOpt.Text) then
-	                            btnOpt.BackgroundColor3 = Color3.fromRGB(180,0,255)
-	                            btnOpt.TextColor3 = Color3.fromRGB(255,255,255)
-	                        else
-	                            btnOpt.BackgroundColor3 = THEME.Button
-	                            btnOpt.TextColor3 = THEME.Text
-	                        end
-	                    end
+	            -- Update highlights
+	            for k,v in pairs(optionButtons) do
+	                if multi then
+	                    v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
+	                else
+	                    v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
 	                end
 	            end
+	            updateButtonText()
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
@@ -369,16 +353,9 @@ function TabObj:CreateDropdown(data)
 	    local dropdownOpen = function(open)
 	        local totalHeight = math.min(#options, maxVisible) * 28
 	        if open then
-	            optionsContainer:TweenSize(UDim2.new(1,-20,0,totalHeight), "Out", "Quad", 0.25, true)
+	            optionsContainer:TweenSize(UDim2.new(1,0,0,totalHeight), "Out", "Quad", 0.25, true)
 	        else
-	            optionsContainer:TweenSize(UDim2.new(1,-20,0,0), "Out", "Quad", 0.25, true)
-	        end
-	        -- push other elements below
-	        for i,v in ipairs(tabPanel:GetChildren()) do
-	            if v:IsA("Frame") and v ~= container and v.Position.Y.Offset > container.Position.Y.Offset then
-	                local offset = open and totalHeight or 0
-	                v:TweenPosition(UDim2.new(v.Position.X.Scale, v.Position.X.Offset, v.Position.Y.Scale, v.Position.Y.Offset + offset), "Out", "Quad", 0.25, true)
-	            end
+	            optionsContainer:TweenSize(UDim2.new(1,0,0,0), "Out", "Quad", 0.25, true)
 	        end
 	    end
 	
@@ -387,6 +364,14 @@ function TabObj:CreateDropdown(data)
 	        dropdownOpen(not visible)
 	    end)
 	
+	    -- Initialize highlights and button text
+	    for k,v in pairs(optionButtons) do
+	        if multi then
+	            v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
+	        else
+	            v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
+	        end
+	    end
 	    updateButtonText()
 	
 	    return {
@@ -396,6 +381,13 @@ function TabObj:CreateDropdown(data)
 	                selected = val
 	            else
 	                selected = {val}
+	            end
+	            for k,v in pairs(optionButtons) do
+	                if multi then
+	                    v.BackgroundColor3 = table.find(selected,k) and Color3.fromRGB(180,0,255) or THEME.Button
+	                else
+	                    v.BackgroundColor3 = k == selected[1] and Color3.fromRGB(180,0,255) or THEME.Button
+	                end
 	            end
 	            updateButtonText()
 	            if data.Callback then pcall(data.Callback, selected) end
