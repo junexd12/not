@@ -232,10 +232,7 @@ function GabGui:CreateWindow(opts)
         end
 
         -- Dropdown
--- Dropdown
-	-- Dropdown
--- Dropdown (fixed)
-	function TabObj:CreateDropdown(data)
+function TabObj:CreateDropdown(data)
 	    data = data or {}
 	    local name = data.Name or "Dropdown"
 	    local options = data.Options or {}
@@ -244,94 +241,96 @@ function GabGui:CreateWindow(opts)
 	    local selected = multi and {} or { data.CurrentOption or options[1] }
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Container
-	    local container = Instance.new("Frame")
-	    container.Size = UDim2.new(1,0,0,36)
-	    container.BackgroundTransparency = 1
-	    container.Parent = tabPanel
+	    -- Ensure tabPanel has UIListLayout for push-down behavior
+	    if not tabPanel:FindFirstChild("UIListLayout") then
+	        local layout = new("UIListLayout",{Parent=tabPanel, Padding=UDim.new(0,8), SortOrder=Enum.SortOrder.LayoutOrder})
+	    end
 	
-	    -- Label
-	    local label = Instance.new("TextLabel")
-	    label.Text = name
-	    label.TextColor3 = THEME.Text
-	    label.TextXAlignment = Enum.TextXAlignment.Left
-	    label.BackgroundTransparency = 1
-	    label.Size = UDim2.new(0.6,0,1,0)
-	    label.Parent = container
+	    local container = new("Frame", {
+	        Parent = tabPanel,
+	        Size = UDim2.new(1,-20,0,36),
+	        BackgroundColor3 = THEME.Button,
+	        ClipsDescendants = true
+	    })
+	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
-	    -- Dropdown button
-	    local btn = Instance.new("TextButton")
-	    btn.Size = UDim2.new(0.4,0,1,0)
-	    btn.Position = UDim2.new(0.6,0,0,0)
-	    btn.Text = selected[1] or "▼"
-	    btn.TextColor3 = THEME.Text
-	    btn.BackgroundColor3 = THEME.Button
-	    btn.Font = Enum.Font.GothamBold
-	    btn.TextSize = 14
-	    btn.Parent = container
+	    local label = new("TextLabel",{
+	        Parent = container,
+	        Size = UDim2.new(0.6,0,1,0),
+	        BackgroundTransparency=1,
+	        Text=name,
+	        TextXAlignment=Enum.TextXAlignment.Left,
+	        TextColor3=THEME.Text,
+	        Font=Enum.Font.Gotham,
+	        TextSize=14
+	    })
 	
-	    -- Options frame
-	    local dropdownFrame = Instance.new("ScrollingFrame")
-	    dropdownFrame.Position = UDim2.new(0,0,0,36)
-	    dropdownFrame.Size = UDim2.new(1,0,0,0)
-	    dropdownFrame.BackgroundColor3 = THEME.Button
-	    dropdownFrame.Visible = false
-	    dropdownFrame.ScrollBarThickness = 6
-	    dropdownFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	    dropdownFrame.Parent = container
+	    local btn = new("TextButton",{
+	        Parent = container,
+	        Size = UDim2.new(0.4,-4,1,0),
+	        Position = UDim2.new(0.6,4,0,0),
+	        Text=selected[1] or "▼",
+	        BackgroundTransparency=1,
+	        TextColor3=THEME.Text,
+	        Font=Enum.Font.GothamBold,
+	        TextSize=14,
+	        ZIndex=3,
+	        Active=true,
+	        CaptureMouse=true,
+	        CaptureTouch=true
+	    })
 	
-	    local layout = Instance.new("UIListLayout")
-	    layout.Parent = dropdownFrame
-	    layout.SortOrder = Enum.SortOrder.LayoutOrder
-	    layout.Padding = UDim.new(0,2)
+	    local dropdownFrame = new("ScrollingFrame",{
+	        Parent = container,
+	        Size=UDim2.new(1,0,0,0),
+	        BackgroundColor3=THEME.Button,
+	        Visible=false,
+	        ScrollBarThickness=6,
+	        ScrollingDirection=Enum.ScrollingDirection.Y,
+	        ZIndex=2,
+	        AutomaticCanvasSize=Enum.AutomaticSize.Y
+	    })
+	    local listLayout = new("UIListLayout",{Parent=dropdownFrame, Padding=UDim.new(0,2), SortOrder=Enum.SortOrder.LayoutOrder})
 	
 	    -- Option buttons
-	    for i,opt in ipairs(options) do
-	        local optBtn = Instance.new("TextButton")
-	        optBtn.Text = opt
-	        optBtn.Size = UDim2.new(1,0,0,28)
-	        optBtn.BackgroundColor3 = THEME.Button
-	        optBtn.TextColor3 = THEME.Text
-	        optBtn.Font = Enum.Font.Gotham
-	        optBtn.TextSize = 14
-	        optBtn.Parent = dropdownFrame
-	
-	        local corner = Instance.new("UICorner")
-	        corner.Parent = optBtn
-	        corner.CornerRadius = UDim.new(0,6)
+	    for i,option in ipairs(options) do
+	        local optBtn = new("TextButton",{
+	            Parent = dropdownFrame,
+	            Size = UDim2.new(1,0,0,28),
+	            Text = option,
+	            BackgroundColor3 = THEME.Button,
+	            TextColor3 = THEME.Text,
+	            Font = Enum.Font.Gotham,
+	            TextSize = 14,
+	            ZIndex = 2
+	        })
+	        new("UICorner",{Parent=optBtn, CornerRadius=UDim.new(0,6)})
 	
 	        optBtn.MouseButton1Click:Connect(function()
 	            if multi then
 	                local found = false
 	                for j,v in ipairs(selected) do
-	                    if v == opt then
+	                    if v == option then
 	                        table.remove(selected,j)
 	                        found = true
 	                        break
 	                    end
 	                end
-	                if not found then table.insert(selected,opt) end
+	                if not found then table.insert(selected, option) end
 	            else
-	                selected = {opt}
-	                btn.Text = opt
+	                selected = {option}
+	                btn.Text = option
 	                dropdownFrame.Visible = false
-	                container.Size = UDim2.new(1,0,0,36)
 	            end
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
 	
-	    -- Toggle dropdown
+	    -- Toggle dropdown visibility
 	    btn.MouseButton1Click:Connect(function()
 	        dropdownFrame.Visible = not dropdownFrame.Visible
-	        if dropdownFrame.Visible then
-	            local height = math.min(#options,maxVisible)*28 + 4
-	            dropdownFrame.Size = UDim2.new(1,0,0,height)
-	            container.Size = UDim2.new(1,0,0,36 + height)
-	        else
-	            dropdownFrame.Size = UDim2.new(1,0,0,0)
-	            container.Size = UDim2.new(1,0,0,36)
-	        end
+	        local totalHeight = math.min(#options, maxVisible) * 28
+	        dropdownFrame.Size = dropdownFrame.Visible and UDim2.new(1,0,0,totalHeight) or UDim2.new(1,0,0,0)
 	    end)
 	
 	    return {
