@@ -172,7 +172,7 @@ function TabObj:CreateDropdown(data)
 	        ClipsDescendants = true,
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
-	    container.Active = true
+	    container.Active = false -- prevent dragging of the container
 	    container.Draggable = false
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
 	
@@ -193,12 +193,14 @@ function TabObj:CreateDropdown(data)
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
-	        Text = table.concat(selected,", ").." ▼",
+	        Text = table.concat(selected,", ").." ▼", -- set the text
 	        BackgroundTransparency = 1,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
 	        TextSize = 14
 	    })
+	    -- set the initial text
+	    btn.Text = table.concat(selected,", ").." ▼" 
 	
 	    -- Options frame (attached)
 	    local dropdownFrame = new("Frame",{
@@ -266,6 +268,7 @@ function TabObj:CreateDropdown(data)
 	
 	    return {Get=function() return selected end}
 	end
+	
 	
 	---------------------------------------------------------------------------------------------
 	
