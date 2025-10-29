@@ -153,7 +153,6 @@ function TabObj:CreateDropdown(data)
 	    local multiple = data.MultipleOptions or false
 	    local selected = {}
 	
-	    -- Preselect CurrentOption
 	    if data.CurrentOption then
 	        if multiple then
 	            selected = type(data.CurrentOption) == "table" and data.CurrentOption or {data.CurrentOption}
@@ -166,15 +165,22 @@ function TabObj:CreateDropdown(data)
 	
 	    local maxVisible = data.MaxVisibleOptions or #options
 	
-	    -- Main dropdown container
-	    local container = new("Frame",{
+	    -- Parent container holds button + options
+	    local parentContainer = new("Frame",{
 	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button,
+	        Size = UDim2.new(1,-20,0,36), -- starts with button height
+	        BackgroundTransparency = 1,
 	        LayoutOrder = data.LayoutOrder or 0
 	    })
+	
+	    -- Dropdown button
+	    local container = new("Frame",{
+	        Parent = parentContainer,
+	        Size = UDim2.new(1,0,0,36),
+	        BackgroundColor3 = THEME.Button
+	    })
 	    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-	    
+	
 	    local label = new("TextLabel",{
 	        Parent = container,
 	        Size = UDim2.new(0.7,0,1,0),
@@ -194,15 +200,14 @@ function TabObj:CreateDropdown(data)
 	        BackgroundTransparency = 1,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
-	        TextSize = 14,
-	        ZIndex = 5
+	        TextSize = 14
 	    })
 	
-	    -- Options frame inside the main container (expands down)
+	    -- Options container (inside parent)
 	    local dropdownFrame = new("Frame",{
-	        Parent = container,
-	        Size = UDim2.new(1,0,0,0),
-	        Position = UDim2.new(0,0,1,2),
+	        Parent = parentContainer,
+	        Size = UDim2.new(1,0,0,0), -- height animates
+	        Position = UDim2.new(0,0,0,36),
 	        BackgroundColor3 = THEME.Button,
 	        ClipsDescendants = true
 	    })
@@ -214,10 +219,11 @@ function TabObj:CreateDropdown(data)
 	        open = not open
 	        local totalHeight = math.min(#options, maxVisible) * 28
 	        dropdownFrame:TweenSize(UDim2.new(1,0,0, open and totalHeight or 0), "Out", "Quad", 0.25, true)
+	        parentContainer:TweenSize(UDim2.new(1,0,0,36 + (open and totalHeight or 0)), "Out", "Quad", 0.25, true)
 	    end
 	    btn.MouseButton1Click:Connect(toggleDropdown)
 	
-	    -- Add option buttons inside dropdownFrame
+	    -- Add option buttons
 	    for _,opt in ipairs(options) do
 	        local item = new("TextButton",{
 	            Parent = dropdownFrame,
