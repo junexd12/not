@@ -170,7 +170,7 @@ function TabObj:CreateDropdown(data)
 	
 	    local maxVisible = data.MaxVisibleOptions or 5
 	
-	    -- Main dropdown button container
+	    -- Dropdown button container
 	    local container = new("Frame",{
 	        Parent = tabPanel,
 	        Size = UDim2.new(1,-20,0,36),
@@ -194,7 +194,7 @@ function TabObj:CreateDropdown(data)
 	        Parent = container,
 	        Size = UDim2.new(0.3,-8,1,0),
 	        Position = UDim2.new(0.7,4,0,0),
-	        Text = table.concat(selected, ", ").." ▼",
+	        Text = table.concat(selected,", ").." ▼",
 	        BackgroundTransparency = 1,
 	        TextColor3 = THEME.Text,
 	        Font = Enum.Font.GothamBold,
@@ -202,11 +202,11 @@ function TabObj:CreateDropdown(data)
 	        ZIndex = 5
 	    })
 	
-	    -- Dropdown sliding frame
+	    -- Options container (attached to button container)
 	    local dropdownFrame = new("ScrollingFrame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,0),
-	        Position = UDim2.new(0,10,0,container.AbsolutePosition.Y + container.AbsoluteSize.Y + 2),
+	        Parent = container,            -- attach to container!
+	        Size = UDim2.new(1,0,0,0),
+	        Position = UDim2.new(0,0,1,2),
 	        BackgroundColor3 = THEME.Button,
 	        ScrollBarThickness = 6,
 	        Visible = false,
@@ -243,6 +243,14 @@ function TabObj:CreateDropdown(data)
 	        })
 	        new("UICorner",{Parent=item, CornerRadius=UDim.new(0,6)})
 	
+	        -- Highlight on hover
+	        item.MouseEnter:Connect(function()
+	            item.BackgroundColor3 = Color3.fromRGB(70,70,80)
+	        end)
+	        item.MouseLeave:Connect(function()
+	            item.BackgroundColor3 = THEME.Button
+	        end)
+	
 	        item.MouseButton1Click:Connect(function()
 	            if multiple then
 	                local found = false
@@ -262,11 +270,6 @@ function TabObj:CreateDropdown(data)
 	            if data.Callback then pcall(data.Callback, selected) end
 	        end)
 	    end
-	
-	    -- Keep dropdown positioned under the button
-	    container:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-	        dropdownFrame.Position = UDim2.new(0, container.AbsolutePosition.X, 0, container.AbsolutePosition.Y + container.AbsoluteSize.Y + 2)
-	    end)
 	
 	    return {Get = function() return selected end}
 	end
