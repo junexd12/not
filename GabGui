@@ -262,8 +262,9 @@ function TabObj:CreateToggle(data)
 	    }
 	end
 	
+	
         -- Slider
-			function TabObj:CreateSlider(SliderSettings)
+function TabObj:CreateSlider(SliderSettings)
 			    local TweenService = game:GetService("TweenService")
 			    local UserInputService = game:GetService("UserInputService")
 			    local RunService = game:GetService("RunService")
@@ -275,56 +276,58 @@ function TabObj:CreateToggle(data)
 			    local suffix = SliderSettings.Suffix or ""
 			    local dragging = false
 			
+			    -- Base container
 			    local container = Instance.new("Frame")
 			    container.Parent = tabPanel
 			    container.Size = UDim2.new(1, -20, 0, 48)
-			    container.BackgroundColor3 = Color3.fromRGB(35, 35, 45) -- match dropdown
+			    container.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 			    container.BorderSizePixel = 0
-			    container.ClipsDescendants = true
 			
-			    local stroke = Instance.new("UIStroke")
-			    stroke.Parent = container
-			    stroke.Color = Color3.fromRGB(170, 0, 255) -- purple glow
-			    stroke.Thickness = 1
-			    stroke.Transparency = 0.4
-			
-			    local corner = Instance.new("UICorner")
-			    corner.Parent = container
+			    local corner = Instance.new("UICorner", container)
 			    corner.CornerRadius = UDim.new(0, 8)
 			
-			    local label = Instance.new("TextLabel")
-			    label.Parent = container
+			    local stroke = Instance.new("UIStroke", container)
+			    stroke.Color = Color3.fromRGB(170, 0, 255)
+			    stroke.Transparency = 0.4
+			    stroke.Thickness = 1
+			
+			    -- Label
+			    local label = Instance.new("TextLabel", container)
 			    label.Position = UDim2.new(0, 8, 0, 2)
 			    label.Size = UDim2.new(1, -16, 0, 18)
 			    label.BackgroundTransparency = 1
 			    label.Font = Enum.Font.Gotham
-			    label.Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or "")
 			    label.TextColor3 = Color3.fromRGB(220, 220, 235)
 			    label.TextSize = 14
 			    label.TextXAlignment = Enum.TextXAlignment.Left
+			    label.Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or "")
 			
-			    local track = Instance.new("Frame")
-			    track.Parent = container
-			    track.Size = UDim2.new(1, -16, 0, 10)
-			    track.Position = UDim2.new(0, 8, 0, 30)
+			    -- Track bar
+			    local track = Instance.new("Frame", container)
+			    track.Position = UDim2.new(0, 8, 0, 28)
+			    track.Size = UDim2.new(1, -16, 0, 12)
 			    track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 			    track.BorderSizePixel = 0
+			    track.ZIndex = 2
 			
-			    local trackCorner = Instance.new("UICorner")
-			    trackCorner.Parent = track
-			    trackCorner.CornerRadius = UDim.new(0, 8)
+			    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 8)
 			
-			    local fill = Instance.new("Frame")
-			    fill.Parent = track
+			    -- Fill bar
+			    local fill = Instance.new("Frame", track)
 			    fill.Size = UDim2.new((cur - min) / (max - min), 0, 1, 0)
-			    fill.BackgroundColor3 = Color3.fromRGB(180, 0, 255) -- purple accent
+			    fill.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
 			    fill.BorderSizePixel = 0
+			    fill.ZIndex = 3
+			    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 8)
 			
-			    local fillCorner = Instance.new("UICorner")
-			    fillCorner.Parent = fill
-			    fillCorner.CornerRadius = UDim.new(0, 8)
+			    -- Transparent overlay for input
+			    local interact = Instance.new("TextButton", track)
+			    interact.BackgroundTransparency = 1
+			    interact.Size = UDim2.new(1, 0, 1, 0)
+			    interact.Text = ""
+			    interact.ZIndex = 4
 			
-			    -- Hover tween
+			    -- Hover animation
 			    container.MouseEnter:Connect(function()
 			        TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 			    end)
@@ -334,6 +337,7 @@ function TabObj:CreateToggle(data)
 			        end
 			    end)
 			
+			    -- Main value logic
 			    local function setFromX(x)
 			        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
 			        local raw = min + rel * (max - min)
@@ -341,20 +345,19 @@ function TabObj:CreateToggle(data)
 			        stepped = math.clamp(stepped, min, max)
 			        cur = stepped
 			
-			        TweenService:Create(fill, TweenInfo.new(0.15, Enum.EasingStyle.Exponential), {
+			        TweenService:Create(fill, TweenInfo.new(0.12, Enum.EasingStyle.Exponential), {
 			            Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
 			        }):Play()
 			
 			        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
 			        if SliderSettings.Callback then
 			            local ok, err = pcall(SliderSettings.Callback, stepped)
-			            if not ok then
-			                warn("[GabGui] Slider callback error: " .. tostring(err))
-			            end
+			            if not ok then warn("[GabGui] Slider callback error: " .. tostring(err)) end
 			        end
 			    end
 			
-			    track.InputBegan:Connect(function(i)
+			    -- Mouse drag logic
+			    interact.InputBegan:Connect(function(i)
 			        if i.UserInputType == Enum.UserInputType.MouseButton1 then
 			            dragging = true
 			            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
@@ -375,6 +378,7 @@ function TabObj:CreateToggle(data)
 			        end
 			    end)
 			
+			    -- External control (works like Rayfield)
 			    local api = {}
 			
 			    function api:Set(v)
@@ -386,9 +390,7 @@ function TabObj:CreateToggle(data)
 			        label.Text = name .. " : " .. tostring(v) .. (suffix ~= "" and " " .. suffix or "")
 			        if SliderSettings.Callback then
 			            local ok, err = pcall(SliderSettings.Callback, v)
-			            if not ok then
-			                warn("[GabGui] Slider:Set() callback error: " .. tostring(err))
-			            end
+			            if not ok then warn("[GabGui] Slider:Set() callback error: " .. tostring(err)) end
 			        end
 			    end
 			
