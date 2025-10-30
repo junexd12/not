@@ -283,25 +283,34 @@ function TabObj:CreateDropdown(data)
 			TextSize = 14
 		})
 	
-		-- Dropdown list panel
-		local dropdownFrame = new("Frame", {
+		-- 🔹 Dropdown list panel now uses ScrollingFrame
+		local dropdownFrame = new("ScrollingFrame", {
 			Parent = tabPanel,
 			Size = UDim2.new(1, -20, 0, 0),
 			BackgroundColor3 = THEME.Button,
 			BorderSizePixel = 0,
 			Visible = false,
+			ScrollBarThickness = 4,
+			ScrollBarImageColor3 = Color3.fromRGB(180, 120, 255),
+			CanvasSize = UDim2.new(0, 0, 0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ClipsDescendants = true
 		})
 		new("UICorner", { Parent = dropdownFrame, CornerRadius = UDim.new(0, 8) })
+	
 		local dropStroke = new("UIStroke", {
 			Parent = dropdownFrame,
 			Color = Color3.fromRGB(140, 0, 255),
 			Transparency = 0.4
 		})
+	
 		local listLayout = new("UIListLayout", {
 			Parent = dropdownFrame,
 			Padding = UDim.new(0, 2)
 		})
+		listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 8)
+		end)
 	
 		-- TweenService alias
 		local TweenService = game:GetService("TweenService")
@@ -312,12 +321,12 @@ function TabObj:CreateDropdown(data)
 				if #selected == 0 then
 					btn.Text = "None ▼"
 				elseif #selected == 1 then
-					btn.Text = selected[1].." ▼"
+					btn.Text = selected[1] .. " ▼"
 				else
-					btn.Text = selected[1].." + "..(#selected-1).." ▼"
+					btn.Text = selected[1] .. " + " .. (#selected - 1) .. " ▼"
 				end
 			else
-				btn.Text = (selected[1] or "None").." ▼"
+				btn.Text = (selected[1] or "None") .. " ▼"
 			end
 		end
 	
@@ -340,7 +349,25 @@ function TabObj:CreateDropdown(data)
 				Transparency = 1
 			})
 	
-			-- Button click logic + color tween
+			-- Hover effect (gentle glow)
+			optBtn.MouseEnter:Connect(function()
+				TweenService:Create(optBtn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+				}):Play()
+				TweenService:Create(optStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+					Transparency = 0.2
+				}):Play()
+			end)
+			optBtn.MouseLeave:Connect(function()
+				TweenService:Create(optBtn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = THEME.Button
+				}):Play()
+				TweenService:Create(optStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+					Transparency = 1
+				}):Play()
+			end)
+	
+			-- Click logic + color tween
 			optBtn.MouseButton1Click:Connect(function()
 				if multi then
 					local found = table.find(selected, option)
@@ -352,7 +379,9 @@ function TabObj:CreateDropdown(data)
 				else
 					selected = { option }
 					open = false
-					TweenService:Create(dropdownFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, 0) }):Play()
+					TweenService:Create(dropdownFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						Size = UDim2.new(1, -20, 0, 0)
+					}):Play()
 					task.wait(0.25)
 					dropdownFrame.Visible = false
 				end
@@ -363,8 +392,12 @@ function TabObj:CreateDropdown(data)
 						local selectedState = table.find(selected, b.Text)
 						local colorGoal = selectedState and Color3.fromRGB(180, 120, 255) or THEME.Button
 						local strokeGoal = selectedState and 0.2 or 1
-						TweenService:Create(b, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { BackgroundColor3 = colorGoal }):Play()
-						TweenService:Create(b.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { Transparency = strokeGoal }):Play()
+						TweenService:Create(b, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+							BackgroundColor3 = colorGoal
+						}):Play()
+						TweenService:Create(b.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+							Transparency = strokeGoal
+						}):Play()
 					end
 				end
 				if data.Callback then pcall(data.Callback, multi and selected or selected[1]) end
@@ -380,28 +413,24 @@ function TabObj:CreateDropdown(data)
 				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
 					BackgroundColor3 = Color3.fromRGB(50, 0, 90)
 				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
-				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, totalHeight) }):Play()
-				for _, opt in ipairs(dropdownFrame:GetChildren()) do
-					if opt:IsA("TextButton") then
-						TweenService:Create(opt, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-						TweenService:Create(opt.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.3 }):Play()
-					end
-				end
+				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+					Transparency = 0
+				}):Play()
+				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+					Size = UDim2.new(1, -20, 0, totalHeight)
+				}):Play()
 			else
-				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, 0) }):Play()
-				for _, opt in ipairs(dropdownFrame:GetChildren()) do
-					if opt:IsA("TextButton") then
-						TweenService:Create(opt, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { BackgroundTransparency = 1 }):Play()
-						TweenService:Create(opt.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { Transparency = 1 }):Play()
-					end
-				end
+				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+					Size = UDim2.new(1, -20, 0, 0)
+				}):Play()
 				task.wait(0.35)
 				dropdownFrame.Visible = false
 				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
 					BackgroundColor3 = THEME.Button
 				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.2 }):Play()
+				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+					Transparency = 0.2
+				}):Play()
 			end
 		end)
 	
