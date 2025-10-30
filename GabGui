@@ -127,7 +127,7 @@ function GabGui:CreateWindow(opts)
         end
 
         -- Toggle
-	function TabObj:CreateToggle(data)
+function TabObj:CreateToggle(data)
 	    data = data or {}
 	    local name = data.Name or "Toggle"
 	    local start = data.CurrentValue or false
@@ -171,7 +171,7 @@ function GabGui:CreateWindow(opts)
 	
 	    local state = start
 	
-	    -- Fade-in animations
+	    -- Fade-in animation
 	    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 	
@@ -180,13 +180,14 @@ function GabGui:CreateWindow(opts)
 	        local toPos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
 	        local bgCol = s and THEME.ToggleOn or THEME.ToggleOff
 	
-	        -- Animate knob and switch
-	        TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quad), {Position = toPos}):Play()
-	        TweenService:Create(switch, TweenInfo.new(0.22), {BackgroundColor3 = bgCol}):Play()
+	        -- Knob & switch tween
+	        TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = toPos}):Play()
+	        TweenService:Create(switch, TweenInfo.new(0.22, Enum.EasingStyle.Exponential), {BackgroundColor3 = bgCol}):Play()
 	
 	        if not noCb and data.Callback then
 	            local success, err = pcall(data.Callback, state)
 	            if not success then
+	                -- Flash red if callback fails
 	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(255, 85, 85)}):Play()
 	                task.wait(0.5)
 	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
@@ -195,7 +196,7 @@ function GabGui:CreateWindow(opts)
 	        end
 	    end
 	
-	    -- Hover animations
+	    -- Hover effects
 	    container.MouseEnter:Connect(function()
 	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ButtonHover}):Play()
 	    end)
@@ -210,6 +211,7 @@ function GabGui:CreateWindow(opts)
 	        end
 	    end)
 	
+	    -- Initialize state
 	    setState(state, true)
 	
 	    return {
