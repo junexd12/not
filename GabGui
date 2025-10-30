@@ -447,43 +447,152 @@ function TabObj:CreateDropdown(data)
 
 -- Keybind
 function TabObj:CreateKeybind(data)
-    data = data or {}
-    local name = data.Name or "Keybind"
-    local key = data.CurrentKeybind or "Q"
-    local hold = data.HoldToInteract or false
-
-    local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
-    new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-    local label = new("TextLabel",{Parent=container, Position=UDim2.new(0,8,0,0), Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-    local btn = new("TextButton",{Parent=container, Size=UDim2.new(0.3,-8,1,0), Position=UDim2.new(0.7,4,0,0), Text=key, BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=14})
-    local listening = false
-
-    btn.MouseButton1Click:Connect(function()
-        listening = true
-        btn.Text = "..."
-    end)
-
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if listening or hold then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                key = input.KeyCode.Name
-                btn.Text = key
-                listening = false
-                if data.Callback then pcall(data.Callback, input.KeyCode) end
-            end
-        elseif input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode.Name == key then
-                if data.Callback then pcall(data.Callback, input.KeyCode) end
-            end
-        end
-    end)
-
-    return {
-        Get=function() return key end,
-        Set=function(_,v) key=v btn.Text=v end
-    }
-end
+		data = data or {}
+		local name = data.Name or "Keybind"
+		local key = data.CurrentKeybind or "Q"
+		local hold = data.HoldToInteract or false
+	
+		local TweenService = game:GetService("TweenService")
+		local UserInputService = game:GetService("UserInputService")
+		local RunService = game:GetService("RunService")
+	
+		local container = new("Frame", {
+			Parent = tabPanel,
+			Size = UDim2.new(1, -20, 0, 36),
+			BackgroundColor3 = THEME.Button,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0
+		})
+		new("UICorner", { Parent = container, CornerRadius = UDim.new(0, 8) })
+		local stroke = new("UIStroke", {
+			Parent = container,
+			Color = Color3.fromRGB(170, 0, 255),
+			Transparency = 1,
+			Thickness = 1.3
+		})
+	
+		local label = new("TextLabel", {
+			Parent = container,
+			Position = UDim2.new(0, 8, 0, 0),
+			Size = UDim2.new(0.7, 0, 1, 0),
+			BackgroundTransparency = 1,
+			Text = name,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.Gotham,
+			TextSize = 14,
+			TextTransparency = 1
+		})
+	
+		local btn = new("TextButton", {
+			Parent = container,
+			Size = UDim2.new(0.3, -8, 1, 0),
+			Position = UDim2.new(0.7, 4, 0, 0),
+			Text = key,
+			BackgroundColor3 = Color3.fromRGB(45, 0, 90),
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.GothamBold,
+			TextSize = 14,
+			BackgroundTransparency = 1
+		})
+		new("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
+		local btnStroke = new("UIStroke", {
+			Parent = btn,
+			Color = Color3.fromRGB(150, 0, 255),
+			Transparency = 1
+		})
+	
+		-- 🔹 Fade-in (Rayfield-style)
+		TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.25 }):Play()
+		TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
+		TweenService:Create(btnStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+	
+		local listening = false
+	
+		-- Hover fade
+		container.MouseEnter:Connect(function()
+			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+				BackgroundColor3 = Color3.fromRGB(55, 0, 110)
+			}):Play()
+		end)
+		container.MouseLeave:Connect(function()
+			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+				BackgroundColor3 = THEME.Button
+			}):Play()
+		end)
+	
+		-- Key listening mode
+		btn.MouseButton1Click:Connect(function()
+			listening = true
+			btn.Text = "..."
+			TweenService:Create(btnStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
+			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+				BackgroundColor3 = Color3.fromRGB(60, 0, 130)
+			}):Play()
+		end)
+	
+		UserInputService.InputBegan:Connect(function(input, gp)
+			if gp then return end
+	
+			if listening then
+				if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode ~= Enum.KeyCode.Unknown then
+					key = input.KeyCode.Name
+					btn.Text = key
+					listening = false
+	
+					-- quick glow flash on confirm
+					TweenService:Create(btn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = Color3.fromRGB(90, 0, 160)
+					}):Play()
+					task.wait(0.15)
+					TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = Color3.fromRGB(45, 0, 90)
+					}):Play()
+	
+					if data.Callback then pcall(data.Callback, input.KeyCode) end
+				end
+	
+				TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = THEME.Button
+				}):Play()
+				TweenService:Create(btnStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+			elseif input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == key then
+				if hold then
+					local held = true
+					local conn
+					conn = input.Changed:Connect(function(prop)
+						if prop == "UserInputState" then
+							held = false
+							conn:Disconnect()
+						end
+					end)
+					local loop
+					loop = RunService.Stepped:Connect(function()
+						if not held then
+							loop:Disconnect()
+							if data.Callback then pcall(data.Callback, false) end
+						else
+							if data.Callback then pcall(data.Callback, true) end
+						end
+					end)
+				else
+					if data.Callback then pcall(data.Callback, input.KeyCode) end
+				end
+			end
+		end)
+	
+		return {
+			Get = function()
+				return key
+			end,
+			Set = function(_, v)
+				key = v
+				btn.Text = v
+			end
+		}
+	end
 
 -- Label
 function TabObj:CreateLabel(text,color,font,bold)
