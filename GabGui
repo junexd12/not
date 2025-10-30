@@ -267,86 +267,145 @@ function TabObj:CreateToggle(data)
 	
 
         -- Slider
--- Slider
-		function TabObj:CreateSlider(SliderSettings)
-		    local name = SliderSettings.Name or "Slider"
-		    local min, max = (SliderSettings.Range and SliderSettings.Range[1]) or 0, (SliderSettings.Range and SliderSettings.Range[2]) or 100
-		    local inc = SliderSettings.Increment or 1
-		    local cur = SliderSettings.CurrentValue or min
-		    local suffix = SliderSettings.Suffix or ""
-		    local dragging = false
-		
-		    local container = new("Frame", {
-		        Parent = tabPanel,
-		        Size = UDim2.new(1, -20, 0, 48),
-		        BackgroundTransparency = 1
-		    })
-		
-		    local label = new("TextLabel", {
-		        Parent = container,
-		        Size = UDim2.new(1, 0, 0, 18),
-		        Position = UDim2.new(0, 0, 0, 0),
-		        BackgroundTransparency = 1,
-		        Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or ""),
-		        TextColor3 = THEME.Text,
-		        Font = Enum.Font.Gotham,
-		        TextSize = 14,
-		        TextXAlignment = Enum.TextXAlignment.Left
-		    })
-		
-		    local track = new("Frame", {
-		        Parent = container,
-		        Size = UDim2.new(1, -40, 0, 18),
-		        Position = UDim2.new(0, 16, 0, 24),
-		        BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-		    })
-		    new("UICorner", {Parent = track, CornerRadius = UDim.new(0, 8)})
-		
-		    local fill = new("Frame", {
-		        Parent = track,
-		        Size = UDim2.new((cur - min) / (max - min), 0, 1, 0),
-		        BackgroundColor3 = THEME.Accent
-		    })
-		    new("UICorner", {Parent = fill, CornerRadius = UDim.new(0, 8)})
-		
-		    local function setFromX(x)
-		        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-		        local raw = min + rel * (max - min)
-		        local stepped = math.floor((raw - min) / inc + 0.5) * inc + min
-		        stepped = math.clamp(stepped, min, max)
-		        fill.Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
-		        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
-		        if SliderSettings.Callback then pcall(SliderSettings.Callback, stepped) end
-		    end
-		
-		    track.InputBegan:Connect(function(i)
-		        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		            dragging = true
-		            setFromX(i.Position.X)
-		        end
-		    end)
-		
-		    track.InputEnded:Connect(function(i)
-		        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		            dragging = false
-		        end
-		    end)
-		
-		    UserInputService.InputChanged:Connect(function(i)
-		        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-		            setFromX(i.Position.X)
-		        end
-		    end)
-		
-		    return {
-		        Set = function(_, v)
-		            if type(v) == "number" then
-		                setFromX(track.AbsolutePosition.X + (v - min) / (max - min) * track.AbsoluteSize.X)
-		            end
-		        end,
-		        Get = function() return cur end
-		    }
-		end
+function TabObj:CreateSlider(SliderSettings)
+			    local TweenService = game:GetService("TweenService")
+			    local UserInputService = game:GetService("UserInputService")
+			
+			    SliderSettings = SliderSettings or {}
+			    local name = SliderSettings.Name or "Slider"
+			    local min = (SliderSettings.Range and SliderSettings.Range[1]) or 0
+			    local max = (SliderSettings.Range and SliderSettings.Range[2]) or 100
+			    local inc = SliderSettings.Increment or 1
+			    local cur = SliderSettings.CurrentValue or min
+			    local suffix = SliderSettings.Suffix or ""
+			    local dragging = false
+			
+			    -- Purple dark container
+			    local container = new("Frame", {
+			        Parent = tabPanel,
+			        Size = UDim2.new(1, -20, 0, 48),
+			        BackgroundColor3 = Color3.fromRGB(25, 0, 45),
+			        BorderSizePixel = 0
+			    })
+			    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
+			    local stroke = new("UIStroke", {
+			        Parent = container,
+			        Color = Color3.fromRGB(170, 0, 255),
+			        Transparency = 0.3,
+			        Thickness = 1.4
+			    })
+			
+			    local label = new("TextLabel", {
+			        Parent = container,
+			        Size = UDim2.new(1, 0, 0, 18),
+			        Position = UDim2.new(0, 0, 0, 4),
+			        BackgroundTransparency = 1,
+			        Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or ""),
+			        TextColor3 = THEME.Text,
+			        Font = Enum.Font.Gotham,
+			        TextSize = 14,
+			        TextXAlignment = Enum.TextXAlignment.Left
+			    })
+			
+			    local track = new("Frame", {
+			        Parent = container,
+			        Size = UDim2.new(1, -32, 0, 10),
+			        Position = UDim2.new(0, 16, 0, 30),
+			        BackgroundColor3 = Color3.fromRGB(50, 0, 90),
+			        BorderSizePixel = 0
+			    })
+			    new("UICorner", {Parent = track, CornerRadius = UDim.new(0, 6)})
+			    new("UIStroke", {
+			        Parent = track,
+			        Color = Color3.fromRGB(120, 0, 200),
+			        Transparency = 0.5
+			    })
+			
+			    local fill = new("Frame", {
+			        Parent = track,
+			        Size = UDim2.new((cur - min) / (max - min), 0, 1, 0),
+			        BackgroundColor3 = Color3.fromRGB(170, 0, 255),
+			        BorderSizePixel = 0
+			    })
+			    new("UICorner", {Parent = fill, CornerRadius = UDim.new(0, 6)})
+			    local fillStroke = new("UIStroke", {
+			        Parent = fill,
+			        Color = Color3.fromRGB(180, 0, 255),
+			        Transparency = 0.2
+			    })
+			
+			    -- Set value function
+			    local function setFromX(x)
+			        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			        local raw = min + rel * (max - min)
+			        local stepped = math.floor((raw - min) / inc + 0.5) * inc + min
+			        stepped = math.clamp(stepped, min, max)
+			        cur = stepped
+			
+			        TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+			            Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
+			        }):Play()
+			
+			        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
+			
+			        if SliderSettings.Callback then
+			            local ok, err = pcall(SliderSettings.Callback, stepped)
+			            if not ok then
+			                -- Red flash error animation
+			                TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
+			                task.wait(0.25)
+			                TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(25, 0, 45)}):Play()
+			                warn("[GabGui] Slider '" .. name .. "' callback error: " .. tostring(err))
+			            end
+			        end
+			    end
+			
+			    -- Hover effect
+			    container.MouseEnter:Connect(function()
+			        TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(35, 0, 70)}):Play()
+			    end)
+			    container.MouseLeave:Connect(function()
+			        TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(25, 0, 45)}):Play()
+			    end)
+			
+			    -- Drag logic
+			    track.InputBegan:Connect(function(i)
+			        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			            dragging = true
+			            setFromX(i.Position.X)
+			            TweenService:Create(fillStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+			        end
+			    end)
+			
+			    UserInputService.InputEnded:Connect(function(i)
+			        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			            dragging = false
+			            TweenService:Create(fillStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.2}):Play()
+			        end
+			    end)
+			
+			    UserInputService.InputChanged:Connect(function(i)
+			        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			            setFromX(i.Position.X)
+			        end
+			    end)
+			
+			    -- External control
+			    return {
+			        Set = function(_, v)
+			            if type(v) == "number" then
+			                v = math.clamp(v, min, max)
+			                cur = v
+			                TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+			                    Size = UDim2.new((v - min) / (max - min), 0, 1, 0)
+			                }):Play()
+			                label.Text = name .. " : " .. tostring(v) .. (suffix ~= "" and " " .. suffix or "")
+			                if SliderSettings.Callback then pcall(SliderSettings.Callback, v) end
+			            end
+			        end,
+			        Get = function() return cur end
+			    }
+			end
 		
         -- Input Box
         function TabObj:CreateInput(data)
