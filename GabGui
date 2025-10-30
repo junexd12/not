@@ -127,23 +127,31 @@ function GabGui:CreateWindow(opts)
         end
 
         -- Toggle
-function TabObj:CreateToggle(data)
+function TabObj:CreateKeybind(data)
 	    data = data or {}
-	    local name = data.Name or "Toggle"
-	    local start = data.CurrentValue or false
+	    local name = data.Name or "Keybind"
+	    local key = data.CurrentKeybind or "Q"
+	    local hold = data.HoldToInteract or false
 	
 	    local container = new("Frame", {
 	        Parent = tabPanel,
 	        Size = UDim2.new(1, -20, 0, 36),
 	        BackgroundColor3 = THEME.Button,
-	        BackgroundTransparency = 1
+	        BackgroundTransparency = 1,
+	        BorderSizePixel = 0
 	    })
 	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
+	    local stroke = new("UIStroke", {
+	        Parent = container,
+	        Color = Color3.fromRGB(170, 0, 255),
+	        Transparency = 1,
+	        Thickness = 1.3
+	    })
 	
 	    local label = new("TextLabel", {
 	        Parent = container,
 	        Position = UDim2.new(0, 8, 0, 0),
-	        Size = UDim2.new(0.7, 0, 1, 0),
+	        Size = UDim2.new(0.6, 0, 1, 0),
 	        BackgroundTransparency = 1,
 	        Text = name,
 	        TextXAlignment = Enum.TextXAlignment.Left,
@@ -153,70 +161,94 @@ function TabObj:CreateToggle(data)
 	        TextTransparency = 1
 	    })
 	
-	    local switch = new("Frame", {
+	    -- The actual keybox
+	    local box = new("TextBox", {
 	        Parent = container,
-	        Size = UDim2.new(0, 46, 0, 24),
-	        Position = UDim2.new(1, -56, 0.5, -12),
-	        BackgroundColor3 = THEME.ToggleOff
+	        Size = UDim2.new(0.3, -8, 1, 0),
+	        Position = UDim2.new(0.7, 4, 0, 0),
+	        Text = key,
+	        PlaceholderText = "",
+	        ClearTextOnFocus = false,
+	        BackgroundTransparency = 1,
+	        TextColor3 = THEME.Text,
+	        Font = Enum.Font.GothamBold,
+	        TextSize = 14
 	    })
-	    new("UICorner", {Parent = switch, CornerRadius = UDim.new(1, 0)})
-	
-	    local knob = new("Frame", {
-	        Parent = switch,
-	        Size = UDim2.new(0, 20, 0, 20),
-	        Position = UDim2.new(0, 2, 0, 2),
-	        BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+	    new("UICorner", {Parent = box, CornerRadius = UDim.new(0, 6)})
+	    local boxStroke = new("UIStroke", {
+	        Parent = box,
+	        Color = Color3.fromRGB(150, 0, 255),
+	        Transparency = 1
 	    })
-	    new("UICorner", {Parent = knob, CornerRadius = UDim.new(1, 0)})
-	
-	    local state = start
 	
 	    -- Fade-in animation
 	    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+	    TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.25}):Play()
 	    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-	
-	    local function setState(s, noCb)
-	        state = s
-	        local toPos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
-	        local bgCol = s and THEME.ToggleOn or THEME.ToggleOff
-	
-	        -- Knob & switch tween
-	        TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = toPos}):Play()
-	        TweenService:Create(switch, TweenInfo.new(0.22, Enum.EasingStyle.Exponential), {BackgroundColor3 = bgCol}):Play()
-	
-	        if not noCb and data.Callback then
-	            local success, err = pcall(data.Callback, state)
-	            if not success then
-	                -- Flash red if callback fails
-	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(255, 85, 85)}):Play()
-	                task.wait(0.5)
-	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
-	                warn("Toggle Callback Error: "..tostring(err))
-	            end
-	        end
-	    end
+	    TweenService:Create(boxStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
 	
 	    -- Hover effects
 	    container.MouseEnter:Connect(function()
-	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ButtonHover}):Play()
+	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+	            BackgroundColor3 = Color3.fromRGB(55, 0, 110)
+	        }):Play()
 	    end)
 	    container.MouseLeave:Connect(function()
-	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
+	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+	            BackgroundColor3 = THEME.Button
+	        }):Play()
 	    end)
 	
-	    -- Toggle click
-	    container.InputBegan:Connect(function(i)
-	        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-	            setState(not state)
+	    -- Focus effects
+	    box.Focused:Connect(function()
+	        TweenService:Create(boxStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+	        TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+	            BackgroundColor3 = Color3.fromRGB(70, 0, 130)
+	        }):Play()
+	    end)
+	    box.FocusLost:Connect(function()
+	        TweenService:Create(boxStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+	        TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+	            BackgroundColor3 = THEME.Button
+	        }):Play()
+	
+	        if box.Text ~= "" then
+	            key = string.upper(box.Text)
+	            if data.Callback then pcall(data.Callback, key) end
 	        end
 	    end)
 	
-	    -- Initialize state
-	    setState(state, true)
+	    -- Key press detection
+	    UserInputService.InputBegan:Connect(function(input, gp)
+	        if gp then return end
+	        if input.UserInputType == Enum.UserInputType.Keyboard then
+	            if input.KeyCode.Name == key then
+	                if hold then
+	                    local held = true
+	                    local conn; conn = input.Changed:Connect(function(prop)
+	                        if prop == "UserInputState" then
+	                            conn:Disconnect()
+	                            held = false
+	                            if data.Callback then pcall(data.Callback, false) end
+	                        end
+	                    end)
+	                    while held do
+	                        if data.Callback then pcall(data.Callback, true) end
+	                        RunService.Stepped:Wait()
+	                    end
+	                else
+	                    if data.Callback then pcall(data.Callback, key) end
+	                end
+	            end
+	        end
+	    end)
 	
 	    return {
-	        Set = function(_, v) setState(v) end,
-	        Get = function() return state end
+	        Get = function() return key end,
+	        Set = function(_, v)
+	            key = v
+	            box.Text = v
+	        end
 	    }
 	end
 
