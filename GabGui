@@ -265,141 +265,133 @@ function TabObj:CreateToggle(data)
 	
         -- Slider
 function TabObj:CreateSlider(SliderSettings)
-			    local TweenService = game:GetService("TweenService")
-			    local UserInputService = game:GetService("UserInputService")
-			    local RunService = game:GetService("RunService")
-			
-			    local name = SliderSettings.Name or "Slider"
-			    local min, max = (SliderSettings.Range and SliderSettings.Range[1]) or 0, (SliderSettings.Range and SliderSettings.Range[2]) or 100
-			    local inc = SliderSettings.Increment or 1
-			    local cur = SliderSettings.CurrentValue or min
-			    local suffix = SliderSettings.Suffix or ""
-			    local dragging = false
-			
-			    -- Base container
-			    local container = Instance.new("Frame")
-			    container.Parent = tabPanel
-			    container.Size = UDim2.new(1, -20, 0, 48)
-			    container.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-			    container.BorderSizePixel = 0
-			
-			    local corner = Instance.new("UICorner", container)
-			    corner.CornerRadius = UDim.new(0, 8)
-			
-			    local stroke = Instance.new("UIStroke", container)
-			    stroke.Color = Color3.fromRGB(170, 0, 255)
-			    stroke.Transparency = 0.4
-			    stroke.Thickness = 1
-			
-			    -- Label
-			    local label = Instance.new("TextLabel", container)
-			    label.Position = UDim2.new(0, 8, 0, 2)
-			    label.Size = UDim2.new(1, -16, 0, 18)
-			    label.BackgroundTransparency = 1
-			    label.Font = Enum.Font.Gotham
-			    label.TextColor3 = Color3.fromRGB(220, 220, 235)
-			    label.TextSize = 14
-			    label.TextXAlignment = Enum.TextXAlignment.Left
-			    label.Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or "")
-			
-			    -- Track bar
-			    local track = Instance.new("Frame", container)
-			    track.Position = UDim2.new(0, 8, 0, 28)
-			    track.Size = UDim2.new(1, -16, 0, 12)
-			    track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-			    track.BorderSizePixel = 0
-			    track.ZIndex = 2
-			
-			    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 8)
-			
-			    -- Fill bar
-			    local fill = Instance.new("Frame", track)
-			    fill.Size = UDim2.new((cur - min) / (max - min), 0, 1, 0)
-			    fill.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
-			    fill.BorderSizePixel = 0
-			    fill.ZIndex = 3
-			    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 8)
-			
-			    -- Transparent overlay for input
-			    local interact = Instance.new("TextButton", track)
-			    interact.BackgroundTransparency = 1
-			    interact.Size = UDim2.new(1, 0, 1, 0)
-			    interact.Text = ""
-			    interact.ZIndex = 4
-			
-			    -- Hover animation
-			    container.MouseEnter:Connect(function()
-			        TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			    end)
-			    container.MouseLeave:Connect(function()
-			        if not dragging then
-			            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
-			        end
-			    end)
-			
-			    -- Main value logic
-			    local function setFromX(x)
-			        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-			        local raw = min + rel * (max - min)
-			        local stepped = math.floor((raw - min) / inc + 0.5) * inc + min
-			        stepped = math.clamp(stepped, min, max)
-			        cur = stepped
-			
-			        TweenService:Create(fill, TweenInfo.new(0.12, Enum.EasingStyle.Exponential), {
-			            Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
-			        }):Play()
-			
-			        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
-			        if SliderSettings.Callback then
-			            local ok, err = pcall(SliderSettings.Callback, stepped)
-			            if not ok then warn("[GabGui] Slider callback error: " .. tostring(err)) end
-			        end
-			    end
-			
-			    -- Mouse drag logic
-			    interact.InputBegan:Connect(function(i)
-			        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			            dragging = true
-			            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			            setFromX(i.Position.X)
-			        end
-			    end)
-			
-			    UserInputService.InputChanged:Connect(function(i)
-			        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-			            setFromX(i.Position.X)
-			        end
-			    end)
-			
-			    UserInputService.InputEnded:Connect(function(i)
-			        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			            dragging = false
-			            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
-			        end
-			    end)
-			
-			    -- External control (works like Rayfield)
-			    local api = {}
-			
-			    function api:Set(v)
-			        v = math.clamp(v, min, max)
-			        cur = v
-			        TweenService:Create(fill, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-			            Size = UDim2.new((v - min) / (max - min), 0, 1, 0)
-			        }):Play()
-			        label.Text = name .. " : " .. tostring(v) .. (suffix ~= "" and " " .. suffix or "")
-			        if SliderSettings.Callback then
-			            local ok, err = pcall(SliderSettings.Callback, v)
-			            if not ok then warn("[GabGui] Slider:Set() callback error: " .. tostring(err)) end
-			        end
-			    end
-			
-			    function api:Get()
-			        return cur
-			    end
-			
-			    return api
-			end
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+
+    local name = SliderSettings.Name or "Slider"
+    local min = (SliderSettings.Range and SliderSettings.Range[1]) or 0
+    local max = (SliderSettings.Range and SliderSettings.Range[2]) or 100
+    local increment = SliderSettings.Increment or 1
+    local value = SliderSettings.CurrentValue or min
+    local suffix = SliderSettings.Suffix or ""
+    local callback = SliderSettings.Callback or function() end
+
+    local dragging = false
+
+    -- Container
+    local container = Instance.new("Frame")
+    container.Parent = tabPanel
+    container.Size = UDim2.new(1, -20, 0, 48)
+    container.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    container.BackgroundTransparency = 1
+    container.BorderSizePixel = 0
+    container.ClipsDescendants = false
+
+    local corner = Instance.new("UICorner", container)
+    corner.CornerRadius = UDim.new(0, 8)
+
+    local stroke = Instance.new("UIStroke", container)
+    stroke.Color = Color3.fromRGB(170, 0, 255)
+    stroke.Transparency = 1
+    stroke.Thickness = 1
+
+    -- Fade-in animation
+    TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+
+    -- Label
+    local label = Instance.new("TextLabel", container)
+    label.Position = UDim2.new(0, 8, 0, 2)
+    label.Size = UDim2.new(1, -16, 0, 18)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTransparency = 1
+    label.Text = string.format("%s : %s%s", name, value, suffix ~= "" and " " .. suffix or "")
+
+    TweenService:Create(label, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+
+    -- Track
+    local track = Instance.new("Frame", container)
+    track.Position = UDim2.new(0, 8, 0, 26)
+    track.Size = UDim2.new(1, -16, 0, 12)
+    track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    track.BorderSizePixel = 0
+    track.ZIndex = 2
+    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 8)
+
+    -- Fill
+    local fill = Instance.new("Frame", track)
+    fill.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 3
+    fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 8)
+
+    -- Click layer (handles drag input)
+    local interact = Instance.new("TextButton", track)
+    interact.BackgroundTransparency = 1
+    interact.Text = ""
+    interact.Size = UDim2.new(1, 0, 1, 0)
+    interact.ZIndex = 4
+
+    -- Function to set slider value from mouse X
+    local function setFromX(x)
+        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+        local newValue = math.floor((min + rel * (max - min)) / increment + 0.5) * increment
+        newValue = math.clamp(newValue, min, max)
+        value = newValue
+
+        TweenService:Create(fill, TweenInfo.new(0.15, Enum.EasingStyle.Exponential), {
+            Size = UDim2.new((newValue - min) / (max - min), 0, 1, 0)
+        }):Play()
+
+        label.Text = string.format("%s : %s%s", name, tostring(newValue), suffix ~= "" and " " .. suffix or "")
+        pcall(callback, newValue)
+    end
+
+    -- Input behavior
+    interact.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+            setFromX(i.Position.X)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            setFromX(i.Position.X)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+        end
+    end)
+
+    -- External API
+    local sliderAPI = {}
+    function sliderAPI:Set(v)
+        v = math.clamp(v, min, max)
+        value = v
+        TweenService:Create(fill, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+            Size = UDim2.new((v - min) / (max - min), 0, 1, 0)
+        }):Play()
+        label.Text = string.format("%s : %s%s", name, tostring(v), suffix ~= "" and " " .. suffix or "")
+        pcall(callback, v)
+    end
+
+    function sliderAPI:Get()
+        return value
+    end
+
+    return sliderAPI
+end
 
         -- Input Box
         function TabObj:CreateInput(data)
