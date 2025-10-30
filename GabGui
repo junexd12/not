@@ -128,124 +128,140 @@ function GabGui:CreateWindow(opts)
 
         -- Toggle
 function TabObj:CreateToggle(data)
-    data = data or {}
-    local name = data.Name or "Toggle"
-    local state = data.CurrentValue or false
-
-    -- Main container
-    local container = new("Frame", {
-        Parent = tabPanel,
-        Size = UDim2.new(1, -20, 0, 36),
-        BackgroundColor3 = THEME.Button,
-        BackgroundTransparency = 1
-    })
-    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
-
-    -- Purple cover-flow glow behind container
-    local glow = new("Frame", {
-        Parent = container,
-        Size = UDim2.new(1, 12, 1, 12), -- slightly larger than container
-        Position = UDim2.new(0, -6, 0, -6),
-        BackgroundColor3 = Color3.fromRGB(180, 120, 255),
-        BackgroundTransparency = 0.6,
-        ZIndex = container.ZIndex - 1
-    })
-    new("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 8)})
-
-    -- Label
-    local label = new("TextLabel", {
-        Parent = container,
-        Position = UDim2.new(0, 8, 0, 0),
-        Size = UDim2.new(0.7, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextColor3 = THEME.Text,
-        Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextTransparency = 1
-    })
-
-    -- Switch & knob
-    local switch = new("Frame", {
-        Parent = container,
-        Size = UDim2.new(0, 46, 0, 24),
-        Position = UDim2.new(1, -56, 0.5, -12),
-        BackgroundColor3 = THEME.ToggleOff
-    })
-    new("UICorner", {Parent = switch, CornerRadius = UDim.new(1, 0)})
-
-    local knob = new("Frame", {
-        Parent = switch,
-        Size = UDim2.new(0, 20, 0, 20),
-        Position = UDim2.new(0, 2, 0, 2),
-        BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-    })
-    new("UICorner", {Parent = knob, CornerRadius = UDim.new(1, 0)})
-
-    -- UIStroke for glow around the switch
-    local stroke = new("UIStroke", {
-        Parent = switch,
-        Color = Color3.fromRGB(170, 0, 255),
-        Transparency = 0.4,
-        Thickness = 1.3
-    })
-
-    -- Fade-in animation
-    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-    TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.25}):Play()
-
-    -- Function to set toggle state
-    local function setState(s, noCb)
-        state = s
-        local pos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
-        local bg = s and THEME.ToggleOn or THEME.ToggleOff
-        local strokeCol = s and Color3.fromRGB(180, 120, 255) or Color3.fromRGB(100, 100, 100)
-        local glowTrans = s and 0.3 or 0.6
-
-        TweenService:Create(knob, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = pos}):Play()
-        TweenService:Create(switch, TweenInfo.new(0.35, Enum.EasingStyle.Exponential), {BackgroundColor3 = bg}):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential), {Color = strokeCol}):Play()
-        TweenService:Create(glow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = glowTrans}):Play()
-
-        if not noCb and data.Callback then
-            local success, err = pcall(data.Callback, state)
-            if not success then
-                -- Flash red if callback fails
-                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(255, 85, 85)}):Play()
-                task.wait(0.5)
-                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
-                warn("Toggle Callback Error: "..tostring(err))
-            end
-        end
-    end
-
-    -- Hover animation (cover flow glow pulse)
-    container.MouseEnter:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(55, 0, 110)}):Play()
-        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.2}):Play()
-    end)
-    container.MouseLeave:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
-        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.3 or 0.6}):Play()
-    end)
-
-    -- Click toggle
-    switch.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            setState(not state)
-        end
-    end)
-
-    -- Initialize state
-    setState(state, true)
-
-    return {
-        Set = function(_, v) setState(v) end,
-        Get = function() return state end
-    }
-end
+	    data = data or {}
+	    local name = data.Name or "Toggle"
+	    local state = data.CurrentValue or false
+	
+	    -- Main container
+	    local container = new("Frame", {
+	        Parent = tabPanel,
+	        Size = UDim2.new(1, -20, 0, 36),
+	        BackgroundColor3 = THEME.Button,
+	        BackgroundTransparency = 1
+	    })
+	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
+	
+	    -- Purple cover-flow glow behind container
+	    local glow = new("Frame", {
+	        Parent = container,
+	        Size = UDim2.new(1, 12, 1, 12), -- slightly larger than container
+	        Position = UDim2.new(0, -6, 0, -6),
+	        BackgroundColor3 = Color3.fromRGB(180, 120, 255),
+	        BackgroundTransparency = 0.6,
+	        ZIndex = container.ZIndex - 1
+	    })
+	    new("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 8)})
+	
+	    -- Label
+	    local label = new("TextLabel", {
+	        Parent = container,
+	        Position = UDim2.new(0, 8, 0, 0),
+	        Size = UDim2.new(0.7, 0, 1, 0),
+	        BackgroundTransparency = 1,
+	        Text = name,
+	        TextXAlignment = Enum.TextXAlignment.Left,
+	        TextColor3 = THEME.Text,
+	        Font = Enum.Font.Gotham,
+	        TextSize = 14,
+	        TextTransparency = 1
+	    })
+	
+	    -- Switch & knob
+	    local switch = new("Frame", {
+	        Parent = container,
+	        Size = UDim2.new(0, 46, 0, 24),
+	        Position = UDim2.new(1, -56, 0.5, -12),
+	        BackgroundColor3 = THEME.ToggleOff
+	    })
+	    new("UICorner", {Parent = switch, CornerRadius = UDim.new(1, 0)})
+	
+	    local knob = new("Frame", {
+	        Parent = switch,
+	        Size = UDim2.new(0, 20, 0, 20),
+	        Position = UDim2.new(0, 2, 0, 2),
+	        BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+	    })
+	    new("UICorner", {Parent = knob, CornerRadius = UDim.new(1, 0)})
+	
+	    -- UIStroke for glow around the switch
+	    local stroke = new("UIStroke", {
+	        Parent = switch,
+	        Color = Color3.fromRGB(170, 0, 255),
+	        Transparency = 0.4,
+	        Thickness = 1.3
+	    })
+	
+	    -- Outer Glow (New Code)
+	 local outerGlow = new("ImageLabel", {
+	        Parent = switch,
+	        Size = UDim2.new(1.2, 0, 1.5, 0),  -- Slightly larger than the switch
+	        Position = UDim2.new(-0.1, 0, -0.2, 0), -- Center the glow behind the switch
+	        BackgroundTransparency = 1,
+	        Image = "rbxassetid://14424442835",  -- Replace with your glow image asset ID
+	        ScaleType = Enum.ScaleType.Slice,
+	        SliceCenter = Rect.new(4, 4, 28, 28),
+	        ZIndex = 0  -- Ensure it's behind the switch and knob
+	    })
+	    outerGlow.Name = "OuterGlow"
+	
+	    -- Fade-in animation
+	    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+	    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+	    TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.25}):Play()
+	
+	    -- Function to set toggle state
+	    local function setState(s, noCb)
+	        state = s
+	        local pos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
+	        local bg = s and THEME.ToggleOn or THEME.ToggleOff
+	        local strokeCol = s and Color3.fromRGB(180, 120, 255) or Color3.fromRGB(100, 100, 100)
+	        local glowTrans = s and 0.3 or 0.6
+	        local outerGlowTransparency = s and 0 or 1
+	
+	        TweenService:Create(knob, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = pos}):Play()
+	        TweenService:Create(switch, TweenInfo.new(0.35, Enum.EasingStyle.Exponential), {BackgroundColor3 = bg}):Play()
+	        TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential), {Color = strokeCol}):Play()
+	        TweenService:Create(glow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = glowTrans}):Play()
+	        TweenService:Create(outerGlow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = outerGlowTransparency}):Play()
+	
+	        if not noCb and data.Callback then
+	            local success, err = pcall(data.Callback, state)
+	            if not success then
+	                -- Flash red if callback fails
+	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(255, 85, 85)}):Play()
+	                task.wait(0.5)
+	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
+	                warn("Toggle Callback Error: "..tostring(err))
+	            end
+	        end
+	    end
+	
+	    -- Hover animation (cover flow glow pulse)
+	    container.MouseEnter:Connect(function()
+	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(55, 0, 110)}):Play()
+	        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.2}):Play()
+	    end)
+	    container.MouseLeave:Connect(function()
+	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
+	        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.3 or 0.6}):Play()
+	    end)
+	
+	    -- Click toggle
+	    switch.InputBegan:Connect(function(i)
+	        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+	            setState(not state)
+	        end
+	    end)
+	
+	    -- Initialize state
+	    setState(state, true)
+	
+	    return {
+	        Set = function(_, v) setState(v) end,
+	        Get = function() return state end
+	    }
+	end
+	
 
         -- Slider
         function TabObj:CreateSlider(data)
