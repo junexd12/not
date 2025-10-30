@@ -141,6 +141,14 @@ function TabObj:CreateToggle(data)
 	    })
 	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
 	
+	    -- Main container glow outline
+	    local containerStroke = new("UIStroke", {
+	        Parent = container,
+	        Color = Color3.fromRGB(180, 120, 255),
+	        Transparency = 0.5,
+	        Thickness = 2
+	    })
+	
 	    -- Purple cover-flow glow behind container
 	    local glow = new("Frame", {
 	        Parent = container,
@@ -228,6 +236,7 @@ function TabObj:CreateToggle(data)
 	        TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential), {Color = strokeCol}):Play()
 	        TweenService:Create(glow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = glowTrans}):Play()
 	        TweenService:Create(outerGlow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = outerGlowTrans}):Play()
+	        TweenService:Create(containerStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Transparency = s and 0.2 or 0.5}):Play()
 	
 	        if not noCb and data.Callback then
 	            local success, err = pcall(data.Callback, state)
@@ -245,11 +254,13 @@ function TabObj:CreateToggle(data)
 	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(55, 0, 110)}):Play()
 	        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.2}):Play()
 	        TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, -1, true), {BackgroundTransparency = 0.2}):Play()
+	        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.2}):Play()
 	    end)
 	    container.MouseLeave:Connect(function()
 	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
 	        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.3 or 0.6}):Play()
 	        TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.2 or 0.6}):Play()
+	        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = state and 0.2 or 0.5}):Play()
 	    end)
 	
 	    -- Click toggle
