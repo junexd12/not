@@ -127,7 +127,7 @@ function GabGui:CreateWindow(opts)
         end
 
         -- Toggle
-	function TabObj:CreateToggle(data)
+function TabObj:CreateToggle(data)
 		    data = data or {}
 		    local name = data.Name or "Toggle"
 		    local state = data.CurrentValue or false
@@ -185,7 +185,7 @@ function GabGui:CreateWindow(opts)
 		        BackgroundColor3 = THEME.ToggleOff,
 		        BorderSizePixel = 0 -- Added to match dropdown element styling
 		    })
-		    new("UICorner", {Parent = switch, CornerRadius = UDim.new(0, 6)}) -- Matched to dropdown option button corner radius
+		    new("UICorner", {Parent = switch, CornerRadius = UDim.new(1, 0)}) -- Switch is fully rounded
 		
 		    local knob = new("Frame", { -- ORIGINAL knob code, no changes
 		        Parent = switch,
@@ -195,32 +195,25 @@ function GabGui:CreateWindow(opts)
 		    })
 		    new("UICorner", {Parent = knob, CornerRadius = UDim.new(1, 0)}) -- REVERTED to original full roundness
 		
-		    -- UIStroke for glow around the switch (matched to dropdown option button stroke)
+		    -- UIStroke for glow around the switch (OUTLINE)
 		    local stroke = new("UIStroke", {
 		        Parent = switch,
-		        Color = Color3.fromRGB(150, 0, 255), -- Matched to dropdown option button stroke color
-		        Transparency = 1, -- Matched to dropdown option button default stroke transparency
-		        Thickness = 1.3 -- Matched to dropdown stroke thickness
+		        Color = Color3.fromRGB(170, 0, 255), -- Purple color
+		        Transparency = 0.4,
+		        Thickness = 1.3
 		    })
 		
-		    -- Outer Glow (working version, matched to dropdown dropdownFrame styling)
-		    local outerGlow = new("Frame", {
-		        Parent = switch,
-		        Size = UDim2.new(2, 0, 2, 0),
-		        Position = UDim2.new(-0.5, 0, -0.5, 0),
-		        BackgroundTransparency = 0,
-		        BackgroundColor3 = Color3.fromRGB(180, 120, 255),
-		        ZIndex = 0,
-		        BorderSizePixel = 0 -- Added to match dropdown element styling
-		    })
-		    new("UICorner", {Parent = outerGlow, CornerRadius = UDim.new(0, 8)}) -- Matched to dropdown dropdownFrame corner radius
+		    -- REMOVE Outer Glow
+		    --if outerGlow then -- Destroy the existing outerGlow instance
+		        --outerGlow:Destroy()
+		    --end
 		
-		    local gradient = new("UIGradient", {
-		        Parent = outerGlow,
-		        Color = ColorSequence.new(Color3.fromRGB(180, 120, 255)),
-		        Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1)}),
-		        Rotation = 0
-		    })
+		    --local gradient = new("UIGradient", {
+		        --Parent = switch,
+		        --Color = ColorSequence.new(Color3.fromRGB(180, 120, 255)),
+		        --Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1)}),
+		        --Rotation = 0
+		    --})
 		
 		    -- Fade-in animation
 		    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
@@ -232,15 +225,14 @@ function GabGui:CreateWindow(opts)
 		        state = s
 		        local pos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
 		        local bg = s and THEME.ToggleOn or THEME.ToggleOff
-		        local strokeCol = s and Color3.fromRGB(150, 0, 255) or Color3.fromRGB(100, 100, 100) -- Updated to match dropdown stroke color
+		        local strokeCol = s and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(100, 100, 100) -- Updated to match dropdown stroke color
 		        local glowTrans = s and 0.3 or 0.6
-		        local outerGlowTrans = s and 0.2 or 0.6
 		
 		        TweenService:Create(knob, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = pos}):Play()
 		        TweenService:Create(switch, TweenInfo.new(0.35, Enum.EasingStyle.Exponential), {BackgroundColor3 = bg}):Play()
 		        TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential), {Color = strokeCol}):Play()
 		        TweenService:Create(glow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = glowTrans}):Play()
-		        TweenService:Create(outerGlow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = outerGlowTrans}):Play()
+		        --TweenService:Create(outerGlow, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = outerGlowTrans}):Play()
 		        TweenService:Create(containerStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Transparency = s and 0.2 or 0.2}):Play() -- Matched to dropdown stroke transparency range
 		
 		        if not noCb and data.Callback then
@@ -258,13 +250,13 @@ function GabGui:CreateWindow(opts)
 		    container.MouseEnter:Connect(function()
 		        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(55, 0, 110)}):Play()
 		        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.2}):Play()
-		        TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, -1, true), {BackgroundTransparency = 0.2}):Play()
+		        --TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, -1, true), {BackgroundTransparency = 0.2}):Play()
 		        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.2}):Play()
 		    end)
 		    container.MouseLeave:Connect(function()
 		        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
 		        TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.3 or 0.6}):Play()
-		        TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.2 or 0.6}):Play()
+		        --TweenService:Create(outerGlow, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = state and 0.2 or 0.6}):Play()
 		        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = state and 0.2 or 0.2}):Play() -- Matched to dropdown stroke transparency range
 		    end)
 		
