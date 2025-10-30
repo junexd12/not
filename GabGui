@@ -484,34 +484,35 @@ function TabObj:CreateKeybind(data)
 			TextTransparency = 1
 		})
 	
-		local btn = new("TextButton", {
+		-- 🔹 TextBox replaces TextButton (for true focus + input)
+		local box = new("TextBox", {
 			Parent = container,
 			Size = UDim2.new(0.3, -8, 1, 0),
 			Position = UDim2.new(0.7, 4, 0, 0),
 			Text = key,
-			BackgroundColor3 = Color3.fromRGB(45, 0, 90),
+			PlaceholderText = "...",
+			ClearTextOnFocus = false,
+			BackgroundTransparency = 1,
 			TextColor3 = THEME.Text,
 			Font = Enum.Font.GothamBold,
-			TextSize = 14,
-			BackgroundTransparency = 1
+			TextSize = 14
 		})
-		new("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
-		local btnStroke = new("UIStroke", {
-			Parent = btn,
+		new("UICorner", { Parent = box, CornerRadius = UDim.new(0, 6) })
+		local boxStroke = new("UIStroke", {
+			Parent = box,
 			Color = Color3.fromRGB(150, 0, 255),
 			Transparency = 1
 		})
 	
-		-- 🔹 Fade-in (Rayfield-style)
+		-- Rayfield fade-in
 		TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
 		TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.25 }):Play()
 		TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
-		TweenService:Create(btn, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+		TweenService:Create(boxStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
 	
 		local listening = false
 	
-		-- Hover fade
+		-- Hover glow fade
 		container.MouseEnter:Connect(function()
 			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
 				BackgroundColor3 = Color3.fromRGB(55, 0, 110)
@@ -523,41 +524,47 @@ function TabObj:CreateKeybind(data)
 			}):Play()
 		end)
 	
-		-- Key listening mode
-		btn.MouseButton1Click:Connect(function()
+		-- Click (focus) -> start listening
+		box.Focused:Connect(function()
 			listening = true
-			btn.Text = "..."
-			TweenService:Create(btnStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
-			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
+			box.Text = ""
+			TweenService:Create(boxStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
+			TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
 				BackgroundColor3 = Color3.fromRGB(60, 0, 130)
 			}):Play()
 		end)
 	
+		box.FocusLost:Connect(function()
+			if box.Text == "" then box.Text = key end
+			listening = false
+			TweenService:Create(boxStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+			TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+				BackgroundColor3 = THEME.Button
+			}):Play()
+		end)
+	
+		-- Handle input events
 		UserInputService.InputBegan:Connect(function(input, gp)
 			if gp then return end
 	
 			if listening then
 				if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode ~= Enum.KeyCode.Unknown then
 					key = input.KeyCode.Name
-					btn.Text = key
+					box.Text = key
+					box:ReleaseFocus()
 					listening = false
 	
-					-- quick glow flash on confirm
-					TweenService:Create(btn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-						BackgroundColor3 = Color3.fromRGB(90, 0, 160)
+					-- confirm glow flash
+					TweenService:Create(box, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+						TextColor3 = Color3.fromRGB(200, 150, 255)
 					}):Play()
 					task.wait(0.15)
-					TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						BackgroundColor3 = Color3.fromRGB(45, 0, 90)
+					TweenService:Create(box, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+						TextColor3 = THEME.Text
 					}):Play()
 	
 					if data.Callback then pcall(data.Callback, input.KeyCode) end
 				end
-	
-				TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = THEME.Button
-				}):Play()
-				TweenService:Create(btnStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
 			elseif input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == key then
 				if hold then
 					local held = true
@@ -584,12 +591,10 @@ function TabObj:CreateKeybind(data)
 		end)
 	
 		return {
-			Get = function()
-				return key
-			end,
+			Get = function() return key end,
 			Set = function(_, v)
 				key = v
-				btn.Text = v
+				box.Text = v
 			end
 		}
 	end
