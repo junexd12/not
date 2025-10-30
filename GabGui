@@ -233,131 +233,187 @@ function GabGui:CreateWindow(opts)
 
         -- Dropdown
 function TabObj:CreateDropdown(data)
-	    data = data or {}
-	    local name = data.Name or "Dropdown"
-	    local options = data.Options or {}
-	    if #options == 0 then return end
+		data = data or {}
+		local name = data.Name or "Dropdown"
+		local options = data.Options or {}
+		if #options == 0 then return end
 	
-	    local multi = data.MultipleOptions or false
-	    local selected = multi and {} or { data.CurrentOption or options[1] }
-	    local maxVisible = data.MaxVisibleOptions or 5
-	    local open = false
+		local multi = data.MultipleOptions or false
+		local selected = multi and {} or { data.CurrentOption or options[1] }
+		local maxVisible = data.MaxVisibleOptions or 5
+		local open = false
 	
-	    local container = new("Frame", {
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,36),
-	        BackgroundColor3 = THEME.Button,
-	        BorderSizePixel = 0,
-	        ClipsDescendants = false -- 🔹 allow dropdown to expand outside
-	    })
-	    new("UICorner",{Parent=container,CornerRadius=UDim.new(0,8)})
+		-- Create main dropdown container (GabGui purple-glow style)
+		local container = new("Frame", {
+			Parent = tabPanel,
+			Size = UDim2.new(1, -20, 0, 36),
+			BackgroundColor3 = THEME.Button,
+			BorderSizePixel = 0,
+			ClipsDescendants = false
+		})
+		new("UICorner", { Parent = container, CornerRadius = UDim.new(0, 8) })
 	
-	    local label = new("TextLabel",{
-	        Parent = container,
-	        Size = UDim2.new(0.6,0,1,0),
-	        BackgroundTransparency=1,
-	        Text=name,
-	        TextXAlignment=Enum.TextXAlignment.Left,
-	        TextColor3=THEME.Text,
-	        Font=Enum.Font.Gotham,
-	        TextSize=14
-	    })
+		-- Purple accent UIStroke
+		local stroke = new("UIStroke", {
+			Parent = container,
+			Color = Color3.fromRGB(170, 0, 255),
+			Transparency = 0.2,
+			Thickness = 1.3
+		})
 	
-	    local btn = new("TextButton",{
-	        Parent = container,
-	        Size = UDim2.new(0.4,-4,1,0),
-	        Position = UDim2.new(0.6,4,0,0),
-	        Text = selected[1] or "None ▼",
-	        BackgroundTransparency = 1,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.GothamBold,
-	        TextSize = 14
-	    })
+		local label = new("TextLabel", {
+			Parent = container,
+			Size = UDim2.new(0.6, 0, 1, 0),
+			BackgroundTransparency = 1,
+			Text = name,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.Gotham,
+			TextSize = 14
+		})
 	
-	    -- separate frame for the dropdown list, *outside* the container so it pushes correctly
-	    local dropdownFrame = new("Frame",{
-	        Parent = tabPanel,
-	        Size = UDim2.new(1,-20,0,0),
-	        BackgroundColor3 = THEME.Button,
-	        BorderSizePixel = 0,
-	        Visible = false
-	    })
-	    new("UICorner",{Parent=dropdownFrame,CornerRadius=UDim.new(0,8)})
+		local btn = new("TextButton", {
+			Parent = container,
+			Size = UDim2.new(0.4, -4, 1, 0),
+			Position = UDim2.new(0.6, 4, 0, 0),
+			Text = selected[1] or "None ▼",
+			BackgroundTransparency = 1,
+			TextColor3 = THEME.Text,
+			Font = Enum.Font.GothamBold,
+			TextSize = 14
+		})
 	
-	    local listLayout = new("UIListLayout",{Parent=dropdownFrame,Padding=UDim.new(0,2)})
+		-- Dropdown list panel
+		local dropdownFrame = new("Frame", {
+			Parent = tabPanel,
+			Size = UDim2.new(1, -20, 0, 0),
+			BackgroundColor3 = THEME.Button,
+			BorderSizePixel = 0,
+			Visible = false,
+			ClipsDescendants = true
+		})
+		new("UICorner", { Parent = dropdownFrame, CornerRadius = UDim.new(0, 8) })
+		local dropStroke = new("UIStroke", {
+			Parent = dropdownFrame,
+			Color = Color3.fromRGB(140, 0, 255),
+			Transparency = 0.4
+		})
+		local listLayout = new("UIListLayout", {
+			Parent = dropdownFrame,
+			Padding = UDim.new(0, 2)
+		})
 	
-	    local function updateBtnText()
-	        if multi then
-	            if #selected == 0 then
-	                btn.Text = "None ▼"
-	            elseif #selected == 1 then
-	                btn.Text = selected[1].." ▼"
-	            else
-	                btn.Text = selected[1].." + "..(#selected-1).." ▼"
-	            end
-	        else
-	            btn.Text = (selected[1] or "None").." ▼"
-	        end
-	    end
+		-- TweenService alias
+		local TweenService = game:GetService("TweenService")
 	
-	    -- Create option buttons
-	    for _,option in ipairs(options) do
-	        local optBtn = new("TextButton",{
-	            Parent = dropdownFrame,
-	            Size = UDim2.new(1,0,0,28),
-	            Text = option,
-	            BackgroundColor3 = THEME.Button,
-	            TextColor3 = THEME.Text,
-	            Font = Enum.Font.Gotham,
-	            TextSize = 14
-	        })
-	        new("UICorner",{Parent=optBtn,CornerRadius=UDim.new(0,6)})
+		-- Update button text depending on selection
+		local function updateBtnText()
+			if multi then
+				if #selected == 0 then
+					btn.Text = "None ▼"
+				elseif #selected == 1 then
+					btn.Text = selected[1].." ▼"
+				else
+					btn.Text = selected[1].." + "..(#selected-1).." ▼"
+				end
+			else
+				btn.Text = (selected[1] or "None").." ▼"
+			end
+		end
 	
-	        optBtn.MouseButton1Click:Connect(function()
-	            if multi then
-	                local found = table.find(selected, option)
-	                if found then
-	                    table.remove(selected, found)
-	                else
-	                    table.insert(selected, option)
-	                end
-	            else
-	                selected = {option}
-	                open = false
-	                dropdownFrame.Visible = false
-	            end
-	            updateBtnText()
-	            for _,b in ipairs(dropdownFrame:GetChildren()) do
-	                if b:IsA("TextButton") then
-	                    b.BackgroundColor3 = table.find(selected, b.Text)
-	                        and Color3.fromRGB(180,120,255)
-	                        or THEME.Button
-	                end
-	            end
-	            if data.Callback then pcall(data.Callback, multi and selected or selected[1]) end
-	        end)
-	    end
+		-- Create option buttons
+		for _, option in ipairs(options) do
+			local optBtn = new("TextButton", {
+				Parent = dropdownFrame,
+				Size = UDim2.new(1, 0, 0, 28),
+				Text = option,
+				BackgroundColor3 = THEME.Button,
+				TextColor3 = THEME.Text,
+				Font = Enum.Font.Gotham,
+				TextSize = 14,
+				BackgroundTransparency = 1
+			})
+			new("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 6) })
+			local optStroke = new("UIStroke", {
+				Parent = optBtn,
+				Color = Color3.fromRGB(150, 0, 255),
+				Transparency = 1
+			})
 	
-	    btn.MouseButton1Click:Connect(function()
-	        open = not open
-	        dropdownFrame.Visible = open
-	        if open then
-	            local totalHeight = math.min(#options, maxVisible) * 30 + 6
-	            dropdownFrame.Size = UDim2.new(1,-20,0,totalHeight)
-	            -- push elements below
-	            dropdownFrame.LayoutOrder = container.LayoutOrder + 1
-	        else
-	            dropdownFrame.Size = UDim2.new(1,-20,0,0)
-	        end
-	    end)
+			-- Button click logic + color tween
+			optBtn.MouseButton1Click:Connect(function()
+				if multi then
+					local found = table.find(selected, option)
+					if found then
+						table.remove(selected, found)
+					else
+						table.insert(selected, option)
+					end
+				else
+					selected = { option }
+					open = false
+					TweenService:Create(dropdownFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, 0) }):Play()
+					task.wait(0.25)
+					dropdownFrame.Visible = false
+				end
 	
-	    return {
-	        Get=function() return multi and selected or selected[1] end,
-	        Set=function(_,v)
-	            selected = multi and v or {v}
-	            updateBtnText()
-	        end
-	    }
+				updateBtnText()
+				for _, b in ipairs(dropdownFrame:GetChildren()) do
+					if b:IsA("TextButton") then
+						local selectedState = table.find(selected, b.Text)
+						local colorGoal = selectedState and Color3.fromRGB(180, 120, 255) or THEME.Button
+						local strokeGoal = selectedState and 0.2 or 1
+						TweenService:Create(b, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { BackgroundColor3 = colorGoal }):Play()
+						TweenService:Create(b.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { Transparency = strokeGoal }):Play()
+					end
+				end
+				if data.Callback then pcall(data.Callback, multi and selected or selected[1]) end
+			end)
+		end
+	
+		-- Open / Close dropdown (Rayfield-style fade + resize)
+		btn.MouseButton1Click:Connect(function()
+			open = not open
+			if open then
+				dropdownFrame.Visible = true
+				local totalHeight = math.min(#options, maxVisible) * 30 + 6
+				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = Color3.fromRGB(50, 0, 90)
+				}):Play()
+				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
+				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, totalHeight) }):Play()
+				for _, opt in ipairs(dropdownFrame:GetChildren()) do
+					if opt:IsA("TextButton") then
+						TweenService:Create(opt, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
+						TweenService:Create(opt.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.3 }):Play()
+					end
+				end
+			else
+				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, -20, 0, 0) }):Play()
+				for _, opt in ipairs(dropdownFrame:GetChildren()) do
+					if opt:IsA("TextButton") then
+						TweenService:Create(opt, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { BackgroundTransparency = 1 }):Play()
+						TweenService:Create(opt.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { Transparency = 1 }):Play()
+					end
+				end
+				task.wait(0.35)
+				dropdownFrame.Visible = false
+				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = THEME.Button
+				}):Play()
+				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.2 }):Play()
+			end
+		end)
+	
+		return {
+			Get = function()
+				return multi and selected or selected[1]
+			end,
+			Set = function(_, v)
+				selected = multi and v or { v }
+				updateBtnText()
+			end
+		}
 	end
 
 -- Keybind
