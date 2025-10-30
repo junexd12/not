@@ -267,196 +267,87 @@ function TabObj:CreateToggle(data)
 	
 
         -- Slider
-function TabObj:CreateSlider(SliderSettings)
-			    local SLDragging = false
-			    -- Keep your template clone logic (unchanged style)
-			    local Slider = Elements.Template.Slider:Clone()
-			    Slider.Name = SliderSettings.Name
-			    Slider.Title.Text = SliderSettings.Name
-			    Slider.Visible = true
-			    Slider.Parent = tabPanel -- ADJUSTED: TabObj's parent (replaces TabPage)
-			
-			    -- Keep your initial transparency setup (unchanged style)
-			    Slider.BackgroundTransparency = 1
-			    Slider.UIStroke.Transparency = 1
-			    Slider.Title.TextTransparency = 1
-			
-			    -- Keep your theme shadow logic (unchanged style)
-			    if THEME ~= GabGuiLibrary.Theme.Default then -- ADJUSTED: TabObj's THEME table (replaces SelectedTheme)
-			        Slider.Main.Shadow.Visible = false
-			    end
-			
-			    -- Keep your theme color mapping (unchanged style)
-			    Slider.Main.BackgroundColor3 = THEME.SliderBackground -- ADJUSTED: TabObj's THEME
-			    Slider.Main.UIStroke.Color = THEME.SliderStroke -- ADJUSTED: TabObj's THEME
-			    Slider.Main.Progress.UIStroke.Color = THEME.SliderStroke -- ADJUSTED: TabObj's THEME
-			    Slider.Main.Progress.BackgroundColor3 = THEME.SliderProgress -- ADJUSTED: TabObj's THEME
-			
-			    -- Keep your fade-in animations (unchanged style)
-			    TweenService:Create(Slider, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-			    TweenService:Create(Slider.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			    TweenService:Create(Slider.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
-			
-			    -- VERIFIED: Initial progress size uses SliderSettings.CurrentValue (supports set() initialization)
-			    Slider.Main.Progress.Size = UDim2.new(0, Slider.Main.AbsoluteSize.X * ((SliderSettings.CurrentValue + SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) > 5 and Slider.Main.AbsoluteSize.X * (SliderSettings.CurrentValue / (SliderSettings.Range[2] - SliderSettings.Range[1])) or 5, 1, 0)
-			
-			    -- VERIFIED: Information text uses SliderSettings.CurrentValue (updates on set())
-			    if not SliderSettings.Suffix then
-			        Slider.Main.Information.Text = tostring(SliderSettings.CurrentValue)
-			    else
-			        Slider.Main.Information.Text = tostring(SliderSettings.CurrentValue) .. " " .. SliderSettings.Suffix
-			    end
-			
-			    -- Keep your hover animations (unchanged style)
-			    Slider.MouseEnter:Connect(function()
-			        TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ElementBackgroundHover}):Play() -- ADJUSTED: TabObj's THEME
-			    end)
-			
-			    Slider.MouseLeave:Connect(function()
-			        TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ElementBackground}):Play() -- ADJUSTED: TabObj's THEME
-			    end)
-			
-			    -- Keep your interact start logic (unchanged style)
-			    Slider.Main.Interact.InputBegan:Connect(function(Input)
-			        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then 
-			            TweenService:Create(Slider.Main.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-			            TweenService:Create(Slider.Main.Progress.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-			            SLDragging = true 
-			        end 
-			    end)
-			
-			    -- Keep your interact end logic (unchanged style)
-			    Slider.Main.Interact.InputEnded:Connect(function(Input) 
-			        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then 
-			            TweenService:Create(Slider.Main.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
-			            TweenService:Create(Slider.Main.Progress.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.3}):Play()
-			            SLDragging = false 
-			        end 
-			    end)
-			
-			    -- Keep your drag loop logic (unchanged style)
-			    Slider.Main.Interact.MouseButton1Down:Connect(function(X)
-			        local Current = Slider.Main.Progress.AbsolutePosition.X + Slider.Main.Progress.AbsoluteSize.X
-			        local Start = Current
-			        local Location = X
-			        local Loop; Loop = RunService.Stepped:Connect(function()
-			            if SLDragging then
-			                Location = UserInputService:GetMouseLocation().X
-			                Current = Current + 0.025 * (Location - Start)
-			
-			                if Location < Slider.Main.AbsolutePosition.X then
-			                    Location = Slider.Main.AbsolutePosition.X
-			                elseif Location > Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X then
-			                    Location = Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X
-			                end
-			
-			                if Current < Slider.Main.AbsolutePosition.X + 5 then
-			                    Current = Slider.Main.AbsolutePosition.X + 5
-			                elseif Current > Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X then
-			                    Current = Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X
-			                end
-			
-			                if Current <= Location and (Location - Start) < 0 then
-			                    Start = Location
-			                elseif Current >= Location and (Location - Start) > 0 then
-			                    Start = Location
-			                end
-			                TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Current - Slider.Main.AbsolutePosition.X, 1, 0)}):Play()
-			                local NewValue = SliderSettings.Range[1] + (Location - Slider.Main.AbsolutePosition.X) / Slider.Main.AbsoluteSize.X * (SliderSettings.Range[2] - SliderSettings.Range[1])
-			
-			                NewValue = math.floor(NewValue / SliderSettings.Increment + 0.5) * (SliderSettings.Increment * 10000000) / 10000000
-			                NewValue = math.clamp(NewValue, SliderSettings.Range[1], SliderSettings.Range[2])
-			
-			                if not SliderSettings.Suffix then
-			                    Slider.Main.Information.Text = tostring(NewValue)
-			                else
-			                    Slider.Main.Information.Text = tostring(NewValue) .. " " .. SliderSettings.Suffix
-			                end
-			
-			                if SliderSettings.CurrentValue ~= NewValue then
-			                    local Success, Response = pcall(function()
-			                        SliderSettings.Callback(NewValue)
-			                    end)
-			                    if not Success then
-			                        TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
-			                        TweenService:Create(Slider.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-			                        Slider.Title.Text = "Callback Error"
-			                        print("GabGui | "..SliderSettings.Name.." Callback Error " ..tostring(Response))
-			                        warn('Check docs.sirius.menu for help with GabGui specific development.')
-			                        task.wait(0.5)
-			                        Slider.Title.Text = SliderSettings.Name
-			                        TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ElementBackground}):Play() -- ADJUSTED: TabObj's THEME
-			                        TweenService:Create(Slider.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			                    end
-			
-			                    SliderSettings.CurrentValue = NewValue
-			                    if not SliderSettings.Ext then
-			                        SaveConfiguration()
-			                    end
-			                end
-			            else
-			                TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Location - Slider.Main.AbsolutePosition.X > 5 and Location - Slider.Main.AbsolutePosition.X or 5, 1, 0)}):Play()
-			                Loop:Disconnect()
-			            end
-			        end)
-			    end)
-			
-			    -- VERIFIED: Set function fully supports SliderSettings:Set(9) (clamps, updates UI, triggers callback)
-			    function SliderSettings:Set(NewVal)
-			        local NewVal = math.clamp(NewVal, SliderSettings.Range[1], SliderSettings.Range[2]) -- Ensures 9 is within your range
-			
-			        -- Updates progress bar size with 9
-			        TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Slider.Main.AbsoluteSize.X * ((NewVal + SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) > 5 and Slider.Main.AbsoluteSize.X * (NewVal / (SliderSettings.Range[2] - SliderSettings.Range[1])) or 5, 1, 0)}):Play()
-			        -- Updates information text with 9
-			        Slider.Main.Information.Text = tostring(NewVal) .. " " .. (SliderSettings.Suffix or "")
-			
-			        -- Triggers callback with 9 (if defined)
-			        local Success, Response = pcall(function()
-			            SliderSettings.Callback(NewVal)
-			        end)
-			
-			        if not Success then
-			            TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
-			            TweenService:Create(Slider.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-			            Slider.Title.Text = "Callback Error"
-			            print("GabGui | "..SliderSettings.Name.." Callback Error " ..tostring(Response))
-			            warn('Check docs.sirius.menu for help with GabGui specific development.')
-			            task.wait(0.5)
-			            Slider.Title.Text = SliderSettings.Name
-			            TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.ElementBackground}):Play() -- ADJUSTED: TabObj's THEME
-			            TweenService:Create(Slider.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			        end
-			
-			        -- Saves 9 as current value
-			        SliderSettings.CurrentValue = NewVal
-			        if not SliderSettings.Ext then
-			            SaveConfiguration()
-			        end
-			    end
-			
-			    -- Keep your configuration saving (unchanged style)
-			    if Settings.ConfigurationSaving then
-			        if Settings.ConfigurationSaving.Enabled and SliderSettings.Flag then
-			            GabGuiLibrary.Flags[SliderSettings.Flag] = SliderSettings
-			        end
-			    end
-			
-			    -- Keep your theme update listener (unchanged style)
-			    THEME:GetPropertyChangedSignal('BackgroundColor3'):Connect(function() -- ADJUSTED: TabObj's THEME trigger (replaces GabGui.Main)
-			        if THEME ~= GabGuiLibrary.Theme.Default then -- ADJUSTED: TabObj's THEME
-			            Slider.Main.Shadow.Visible = false
-			        end
-			
-			        Slider.Main.BackgroundColor3 = THEME.SliderBackground -- ADJUSTED: TabObj's THEME
-			        Slider.Main.UIStroke.Color = THEME.SliderStroke -- ADJUSTED: TabObj's THEME
-			        Slider.Main.Progress.UIStroke.Color = THEME.SliderStroke -- ADJUSTED: TabObj's THEME
-			        Slider.Main.Progress.BackgroundColor3 = THEME.SliderProgress -- ADJUSTED: TabObj's THEME
-			    end)
-			
-			    return SliderSettings
-			end
-			
-
+-- Slider
+		function TabObj:CreateSlider(SliderSettings)
+		    local name = SliderSettings.Name or "Slider"
+		    local min, max = (SliderSettings.Range and SliderSettings.Range[1]) or 0, (SliderSettings.Range and SliderSettings.Range[2]) or 100
+		    local inc = SliderSettings.Increment or 1
+		    local cur = SliderSettings.CurrentValue or min
+		    local suffix = SliderSettings.Suffix or ""
+		    local dragging = false
+		
+		    local container = new("Frame", {
+		        Parent = tabPanel,
+		        Size = UDim2.new(1, -20, 0, 48),
+		        BackgroundTransparency = 1
+		    })
+		
+		    local label = new("TextLabel", {
+		        Parent = container,
+		        Size = UDim2.new(1, 0, 0, 18),
+		        Position = UDim2.new(0, 0, 0, 0),
+		        BackgroundTransparency = 1,
+		        Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or ""),
+		        TextColor3 = THEME.Text,
+		        Font = Enum.Font.Gotham,
+		        TextSize = 14,
+		        TextXAlignment = Enum.TextXAlignment.Left
+		    })
+		
+		    local track = new("Frame", {
+		        Parent = container,
+		        Size = UDim2.new(1, -40, 0, 18),
+		        Position = UDim2.new(0, 16, 0, 24),
+		        BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		    })
+		    new("UICorner", {Parent = track, CornerRadius = UDim.new(0, 8)})
+		
+		    local fill = new("Frame", {
+		        Parent = track,
+		        Size = UDim2.new((cur - min) / (max - min), 0, 1, 0),
+		        BackgroundColor3 = THEME.Accent
+		    })
+		    new("UICorner", {Parent = fill, CornerRadius = UDim.new(0, 8)})
+		
+		    local function setFromX(x)
+		        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		        local raw = min + rel * (max - min)
+		        local stepped = math.floor((raw - min) / inc + 0.5) * inc + min
+		        stepped = math.clamp(stepped, min, max)
+		        fill.Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
+		        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
+		        if SliderSettings.Callback then pcall(SliderSettings.Callback, stepped) end
+		    end
+		
+		    track.InputBegan:Connect(function(i)
+		        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		            dragging = true
+		            setFromX(i.Position.X)
+		        end
+		    end)
+		
+		    track.InputEnded:Connect(function(i)
+		        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		            dragging = false
+		        end
+		    end)
+		
+		    UserInputService.InputChanged:Connect(function(i)
+		        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		            setFromX(i.Position.X)
+		        end
+		    end)
+		
+		    return {
+		        Set = function(_, v)
+		            if type(v) == "number" then
+		                setFromX(track.AbsolutePosition.X + (v - min) / (max - min) * track.AbsoluteSize.X)
+		            end
+		        end,
+		        Get = function() return cur end
+		    }
+		end
+		
         -- Input Box
         function TabObj:CreateInput(data)
             data = data or {}
