@@ -1,1004 +1,963 @@
--- GabGui mini Rayfield-style clone (client-only)
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
+-- DEBUG FLAG
+local debugX = true
 
--- Theme (easy to tweak)
-local THEME = {
-    Background = Color3.fromRGB(25,25,30),
-    Header = Color3.fromRGB(35,35,40),
-    Accent = Color3.fromRGB(180,0,255),
-    Button = Color3.fromRGB(40,40,50),
-    ToggleOn = Color3.fromRGB(180,0,255),
-    ToggleOff = Color3.fromRGB(70,70,80),
-    Text = Color3.fromRGB(235,235,235),
-    Corner = 10,
-    WindowSize = UDim2.new(0, 360, 0, 260)
+if debugX then
+	warn('Initialising GabGui')
+end
+
+-- SERVICES
+local function getService(name)
+	local service = game:GetService(name)
+	return cloneref and cloneref(service) or service
+end
+
+local HttpService = getService('HttpService')
+local RunService = getService('RunService')
+local useStudio = RunService:IsStudio()
+
+-- REQUEST WITH TIMEOUT
+local function loadWithTimeout(url: string, timeout: number?)
+	assert(type(url) == "string", "Expected string, got " .. type(url))
+	timeout = timeout or 5
+
+	local requestCompleted, success, result = false, false, nil
+
+	local requestThread = task.spawn(function()
+		local ok, content = pcall(game.HttpGet, game, url)
+		if not ok or #content == 0 then
+			result = (#content == 0 and "Empty response" or content)
+			success = false
+			requestCompleted = true
+			return
+		end
+		local execOk, execResult = pcall(loadstring(content))
+		success, result = execOk, execResult
+		requestCompleted = true
+	end)
+
+	local timeoutThread = task.delay(timeout, function()
+		if not requestCompleted then
+			warn(("Request for %s timed out after %d seconds"):format(url, timeout))
+			task.cancel(requestThread)
+			result = "Request timed out"
+			requestCompleted = true
+		end
+	end)
+
+	while not requestCompleted do task.wait() end
+	if coroutine.status(timeoutThread) ~= "dead" then task.cancel(timeoutThread) end
+
+	if not success then
+		warn(("Failed to process %s: %s"):format(url, tostring(result)))
+	end
+
+	return success and result or nil
+end
+
+-- SETTINGS
+local requestsDisabled = true
+local InterfaceBuild = '3K3W'
+local Release = "Build 1.68"
+local GabGuiFolder = "GabGui"
+local ConfigurationFolder = GabGuiFolder.."/Configurations"
+local ConfigurationExtension = ".rfld"
+
+local settingsTable = {
+	General = {
+		GabGuiOpen = { Type = 'bind', Value = 'K', Name = 'GabGui Keybind' },
+	},
+	System = {
+		usageAnalytics = { Type = 'toggle', Value = true, Name = 'Anonymised Analytics' }
+	}
 }
 
--- Helper to create instances
-local function new(class, props)
-    local obj = Instance.new(class)
-    if props then
-        for k,v in pairs(props) do
-            if k == "Parent" then obj.Parent = v else pcall(function() obj[k] = v end) end
+local overriddenSettings = {}
+local function overrideSetting(category, name, value)
+	overriddenSettings[("%s.%s"):format(category, name)] = value
+end
+
+local function getSetting(category, name)
+	local key = ("%s.%s"):format(category, name)
+	if overriddenSettings[key] ~= nil then
+		return overriddenSettings[key]
+	elseif settingsTable[category][name] ~= nil then
+		return settingsTable[category][name].Value
+	end
+end
+
+if requestsDisabled then
+	overrideSetting("System", "usageAnalytics", false)
+end
+
+-- SETTINGS LOADER
+local cachedSettings
+local settingsCreated = false
+local settingsInitialized = false
+
+local function loadSettings()
+	task.spawn(function()
+		local file
+		if useStudio then
+			file = [[
+				{"General":{"GabGuiOpen":{"Value":"K","Type":"bind","Name":"GabGui Keybind"}},"System":{"usageAnalytics":{"Value":false,"Type":"toggle","Name":"Anonymised Analytics"}}}
+			]]
+		elseif isfolder and isfolder(GabGuiFolder) and isfile and isfile(GabGuiFolder..'/settings'..ConfigurationExtension) then
+			file = readfile(GabGuiFolder..'/settings'..ConfigurationExtension)
+		end
+
+		if file then
+			local success, decoded = pcall(HttpService.JSONDecode, HttpService, file)
+			cachedSettings = success and decoded or {}
+		else
+			cachedSettings = {}
+		end
+
+		if settingsCreated then
+			for catName, cat in pairs(settingsTable) do
+				if cachedSettings[catName] then
+					for setName, set in pairs(cat) do
+						if cachedSettings[catName][setName] then
+							set.Value = cachedSettings[catName][setName].Value
+							if set.Element then
+								set.Element:Set(getSetting(catName, setName))
+							end
+						end
+					end
+				end
+			end
+		end
+		settingsInitialized = true
+	end)
+end
+
+if debugX then warn('Now Loading Settings Configuration') end
+loadSettings()
+if debugX then warn('Settings Loaded') end
+
+-- THEMES
+local GabGuiLibrary = {
+	Flags = {},
+	Theme = {
+		Default = {
+			TextColor = Color3.fromRGB(240, 240, 240),
+			Background = Color3.fromRGB(25, 25, 25),
+			Topbar = Color3.fromRGB(34, 34, 34),
+			Shadow = Color3.fromRGB(20, 20, 20),
+			NotificationBackground = Color3.fromRGB(20, 20, 20),
+			NotificationActionsBackground = Color3.fromRGB(230, 230, 230),
+			TabBackground = Color3.fromRGB(80, 80, 80),
+			TabStroke = Color3.fromRGB(85, 85, 85),
+			TabBackgroundSelected = Color3.fromRGB(210, 210, 210),
+			TabTextColor = Color3.fromRGB(240, 240, 240),
+			SelectedTabTextColor = Color3.fromRGB(50, 50, 50),
+			ElementBackground = Color3.fromRGB(35, 35, 35),
+			ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
+			SecondaryElementBackground = Color3.fromRGB(25, 25, 25),
+			ElementStroke = Color3.fromRGB(50, 50, 50),
+			SecondaryElementStroke = Color3.fromRGB(40, 40, 40),
+			SliderBackground = Color3.fromRGB(50, 138, 220),
+			SliderProgress = Color3.fromRGB(50, 138, 220),
+			SliderStroke = Color3.fromRGB(58, 163, 255),
+			ToggleBackground = Color3.fromRGB(30, 30, 30),
+			ToggleEnabled = Color3.fromRGB(0, 146, 214),
+			ToggleDisabled = Color3.fromRGB(100, 100, 100),
+			ToggleEnabledStroke = Color3.fromRGB(0, 170, 255),
+			ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
+			ToggleEnabledOuterStroke = Color3.fromRGB(100, 100, 100),
+			ToggleDisabledOuterStroke = Color3.fromRGB(65, 65, 65),
+			DropdownSelected = Color3.fromRGB(40, 40, 40),
+			DropdownUnselected = Color3.fromRGB(30, 30, 30),
+			InputBackground = Color3.fromRGB(30, 30, 30),
+			InputStroke = Color3.fromRGB(65, 65, 65),
+			PlaceholderColor = Color3.fromRGB(178, 178, 178)
+		},
+		-- other themes follow same structure...
+	}
+}
+
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local GuiService = game:GetService("GuiService")
+local HttpService = game:GetService("HttpService")
+
+-- Interface Management
+local GabGui = useStudio and script.Parent:FindFirstChild("GabGui") or game:GetObjects("rbxassetid://10804731440")[1]
+local buildAttempts, correctBuild, warned = 0, false, nil
+local globalLoaded, GabGuiDestroyed = nil, false -- True when GabGuiLibrary:Destroy() is called
+
+repeat
+	if GabGui:FindFirstChild("Build") and GabGui.Build.Value == InterfaceBuild then
+		correctBuild = true
+		break
+	end
+
+	correctBuild = false
+
+	if not warned then
+		warn("GabGui | Build Mismatch")
+		print("GabGui may encounter issues: running incompatible interface version (".. ((GabGui:FindFirstChild("Build") and GabGui.Build.Value) or "No Build") .."). Expected build: "..InterfaceBuild..".")
+		warned = true
+	end
+
+	local toDestroy = GabGui
+	GabGui = useStudio and script.Parent:FindFirstChild("GabGui") or game:GetObjects("rbxassetid://10804731440")[1]
+	if toDestroy and not useStudio then toDestroy:Destroy() end
+
+	buildAttempts += 1
+until buildAttempts >= 2
+
+GabGui.Enabled = false
+
+-- Parent assignment
+if gethui then
+	GabGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+	syn.protect_gui(GabGui)
+	GabGui.Parent = CoreGui
+elseif not useStudio then
+	GabGui.Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui
+end
+
+-- Disable old instances
+local function disableOldInstances(parent)
+	for _, iface in ipairs(parent:GetChildren()) do
+		if iface.Name == GabGui.Name and iface ~= GabGui then
+			iface.Enabled = false
+			iface.Name = "GabGui-Old"
+		end
+	end
+end
+
+if gethui then
+	disableOldInstances(gethui())
+elseif not useStudio then
+	disableOldInstances(CoreGui)
+end
+
+-- Sizing flags
+local minSize = Vector2.new(1024, 768)
+local useMobileSizing = GabGui.AbsoluteSize.X < minSize.X and GabGui.AbsoluteSize.Y < minSize.Y
+local useMobilePrompt = UserInputService.TouchEnabled
+
+-- Object variables
+local Main = GabGui.Main
+local MPrompt = GabGui:FindFirstChild("Prompt")
+local Topbar = Main.Topbar
+local Elements = Main.Elements
+local LoadingFrame = Main.LoadingFrame
+local TabList = Main.TabList
+local dragBar = GabGui:FindFirstChild("Drag")
+local dragInteract = dragBar and dragBar.Interact
+local dragBarCosmetic = dragBar and dragBar.Drag
+
+local dragOffset, dragOffsetMobile = 255, 150
+GabGui.DisplayOrder = 100
+LoadingFrame.Version.Text = Release
+
+-- Lucide Icons
+local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout("https://raw.githubusercontent.com/SiriusSoftwareLtd/GabGui/refs/heads/main/icons.lua")
+
+-- State variables
+local CFileName, CEnabled, Minimised, Hidden, Debounce, searchOpen = nil, false, false, false, false, false
+local Notifications = GabGui.Notifications
+local SelectedTheme = GabGuiLibrary.Theme.Default
+
+-- Purple Dark Glow Theme Setter
+local function ChangeTheme(Theme)
+	if typeof(Theme) == "string" then
+		SelectedTheme = GabGuiLibrary.Theme[Theme]
+	elseif typeof(Theme) == "table" then
+		SelectedTheme = Theme
+	end
+
+	-- Main Colors
+	Main.BackgroundColor3 = SelectedTheme.Background
+	Topbar.BackgroundColor3 = SelectedTheme.Topbar
+	Topbar.CornerRepair.BackgroundColor3 = SelectedTheme.Topbar
+	Main.Shadow.Image.ImageColor3 = SelectedTheme.Shadow
+
+	-- Topbar Icons
+	Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
+	Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
+	Topbar.Search.ImageColor3 = SelectedTheme.TextColor
+	if Topbar:FindFirstChild("Settings") then
+		Topbar.Settings.ImageColor3 = SelectedTheme.TextColor
+		Topbar.Divider.BackgroundColor3 = SelectedTheme.ElementStroke
+	end
+
+	-- Search
+	Main.Search.BackgroundColor3 = SelectedTheme.TextColor
+	Main.Search.Shadow.ImageColor3 = SelectedTheme.TextColor
+	Main.Search.Search.ImageColor3 = SelectedTheme.TextColor
+	Main.Search.Input.PlaceholderColor3 = SelectedTheme.TextColor
+	Main.Search.UIStroke.Color = SelectedTheme.SecondaryElementStroke
+
+	-- Notice
+	if Main:FindFirstChild("Notice") then
+		Main.Notice.BackgroundColor3 = SelectedTheme.Background
+	end
+
+	-- Texts
+	for _, text in ipairs(GabGui:GetDescendants()) do
+		if text.Parent.Parent ~= Notifications then
+			if text:IsA("TextLabel") or text:IsA("TextBox") then
+				text.TextColor3 = SelectedTheme.TextColor
+			end
+		end
+	end
+
+	-- Elements
+	for _, TabPage in ipairs(Elements:GetChildren()) do
+		for _, Element in ipairs(TabPage:GetChildren()) do
+			if Element.ClassName == "Frame" and not table.find({"Placeholder", "SectionSpacing", "Divider", "SectionTitle", "SearchTitle-fsefsefesfsefesfesfThanks"}, Element.Name) then
+				Element.BackgroundColor3 = SelectedTheme.ElementBackground
+				Element.UIStroke.Color = SelectedTheme.ElementStroke
+			end
+		end
+	end
+end
+
+
+function GabGuiLibrary:Notify(data)
+	task.spawn(function()
+		local newNotification = Notifications.Template:Clone()
+		newNotification.Name = data.Title or "No Title Provided"
+		newNotification.Parent = Notifications
+		newNotification.LayoutOrder = #Notifications:GetChildren()
+		newNotification.Visible = false
+
+		-- Set content
+		newNotification.Title.Text = data.Title or "Unknown Title"
+		newNotification.Description.Text = data.Content or "Unknown Content"
+
+		if data.Image then
+			if typeof(data.Image) == "string" and Icons then
+				local asset = getIcon(data.Image)
+				newNotification.Icon.Image = "rbxassetid://"..asset.id
+				newNotification.Icon.ImageRectOffset = asset.imageRectOffset
+				newNotification.Icon.ImageRectSize = asset.imageRectSize
+			else
+				newNotification.Icon.Image = getAssetUri(data.Image)
+			end
+		else
+			newNotification.Icon.Image = "rbxassetid://0"
+		end
+
+		-- Theme
+		newNotification.Title.TextColor3 = SelectedTheme.TextColor
+		newNotification.Description.TextColor3 = SelectedTheme.TextColor
+		newNotification.BackgroundColor3 = SelectedTheme.Background
+		newNotification.UIStroke.Color = SelectedTheme.TextColor
+		newNotification.Icon.ImageColor3 = SelectedTheme.TextColor
+
+		newNotification.BackgroundTransparency = 1
+		newNotification.Title.TextTransparency = 1
+		newNotification.Description.TextTransparency = 1
+		newNotification.UIStroke.Transparency = 1
+		newNotification.Shadow.ImageTransparency = 1
+		newNotification.Size = UDim2.new(1, 0, 0, 800)
+		newNotification.Icon.ImageTransparency = 1
+		newNotification.Icon.BackgroundTransparency = 1
+
+		task.wait()
+		newNotification.Visible = true
+
+		if data.Actions then
+			warn("GabGui | Notification actions are currently disabled.")
+		end
+
+		local bounds = {newNotification.Title.TextBounds.Y, newNotification.Description.TextBounds.Y}
+		newNotification.Size = UDim2.new(1, -60, 0, -Notifications:FindFirstChild("UIListLayout").Padding.Offset)
+		newNotification.Icon.Size = UDim2.new(0, 32, 0, 32)
+		newNotification.Icon.Position = UDim2.new(0, 20, 0.5, 0)
+
+		TweenService:Create(newNotification, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, 0, 0, math.max(bounds[1] + bounds[2] + 31, 60))}):Play()
+		task.wait(0.15)
+
+		TweenService:Create(newNotification, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.45}):Play()
+		TweenService:Create(newNotification.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+		task.wait(0.05)
+
+		TweenService:Create(newNotification.Icon, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+		task.wait(0.05)
+
+		TweenService:Create(newNotification.Description, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0.35}):Play()
+		TweenService:Create(newNotification.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.95}):Play()
+		TweenService:Create(newNotification.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.82}):Play()
+
+		local waitDuration = math.min(math.max((#newNotification.Description.Text * 0.1) + 2.5, 3), 10)
+		task.wait(data.Duration or waitDuration)
+
+		newNotification.Icon.Visible = false
+		TweenService:Create(newNotification, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+		TweenService:Create(newNotification.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+		TweenService:Create(newNotification.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+		TweenService:Create(newNotification.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+		TweenService:Create(newNotification.Description, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+		TweenService:Create(newNotification, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -90, 0, 0)}):Play()
+		task.wait(1)
+		TweenService:Create(newNotification, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -90, 0, -Notifications:FindFirstChild("UIListLayout").Padding.Offset)}):Play()
+		newNotification.Visible = false
+		newNotification:Destroy()
+	end)
+end
+
+-- Search Functions
+local function openSearch()
+	searchOpen = true
+	local S = Main.Search
+	S.BackgroundTransparency = 1
+	S.Shadow.ImageTransparency = 1
+	S.Input.TextTransparency = 1
+	S.Search.ImageTransparency = 1
+	S.UIStroke.Transparency = 1
+	S.Size = UDim2.new(1, 0, 0, 80)
+	S.Position = UDim2.new(0.5, 0, 0, 70)
+	S.Input.Interactable = true
+	S.Visible = true
+
+	for _, tabbtn in ipairs(TabList:GetChildren()) do
+		if tabbtn.ClassName == "Frame" and tabbtn.Name ~= "Placeholder" then
+			tabbtn.Interact.Visible = false
+			TweenService:Create(tabbtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+			TweenService:Create(tabbtn.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+			TweenService:Create(tabbtn.Image, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+			TweenService:Create(tabbtn.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+		end
+	end
+
+	S.Input:CaptureFocus()
+	TweenService:Create(S.Shadow, TweenInfo.new(0.05, Enum.EasingStyle.Quint), {ImageTransparency = 0.95}):Play()
+	TweenService:Create(S, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Position = UDim2.new(0.5, 0, 0, 57), BackgroundTransparency = 0.9}):Play()
+	TweenService:Create(S.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.8}):Play()
+	TweenService:Create(S.Input, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
+	TweenService:Create(S.Search, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.5}):Play()
+	TweenService:Create(S, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -35, 0, 35)}):Play()
+end
+
+local function closeSearch()
+	searchOpen = false
+	local S = Main.Search
+	TweenService:Create(S, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {BackgroundTransparency = 1, Size = UDim2.new(1, -55, 0, 30)}):Play()
+	TweenService:Create(S.Search, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	TweenService:Create(S.Shadow, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	TweenService:Create(S.UIStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+	TweenService:Create(S.Input, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+
+	for _, tabbtn in ipairs(TabList:GetChildren()) do
+		if tabbtn.ClassName == "Frame" and tabbtn.Name ~= "Placeholder" then
+			tabbtn.Interact.Visible = true
+			if tostring(Elements.UIPageLayout.CurrentPage) == tabbtn.Title.Text then
+				TweenService:Create(tabbtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+				TweenService:Create(tabbtn.Image, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+				TweenService:Create(tabbtn.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+				TweenService:Create(tabbtn.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+			else
+				TweenService:Create(tabbtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.7}):Play()
+				TweenService:Create(tabbtn.Image, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.2}):Play()
+				TweenService:Create(tabbtn.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
+				TweenService:Create(tabbtn.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
+			end
+		end
+	end
+
+	S.Input.Text = ""
+	S.Input.Interactable = false
+end
+
+function GabGuiLibrary:CreateWindow(Settings)
+    local TweenService = game:GetService("TweenService")
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+
+    -- Basic setup
+    GabGui.Enabled = true
+    Main.Size = UDim2.new(0, 420, 0, 100)
+    Main.Visible = true
+    Main.BackgroundTransparency = 1
+    Topbar.Title.Text = Settings.Name or "GabGui"
+    Elements.Template.Visible = false
+    Notifications.Template.Visible = false
+    Notifications.Visible = true
+
+    -- Purple glow for all UI frames
+    local function addPurpleGlow(Frame)
+        if Frame:FindFirstChild("UIStroke") then
+            Frame.UIStroke.Color = Color3.fromRGB(148, 0, 211) -- deep purple
+            Frame.UIStroke.Thickness = 2
+            Frame.UIStroke.Transparency = 0.3
+            Frame.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         end
     end
-    return obj
-end
 
--- Notification
-function GabGuiNotify(data)
-    local title = data.Title or "Notification"
-    local content = data.Content or ""
-    local duration = data.Duration or 3
-    local gui = new("ScreenGui",{Parent=PlayerGui, ResetOnSpawn=false})
-    local root = new("Frame",{Parent=gui, Size=UDim2.new(0,280,0,64), Position=UDim2.new(1,-300,0,24), BackgroundColor3=THEME.Header, BorderSizePixel=0})
-    new("UICorner",{Parent=root, CornerRadius=UDim.new(0,8)})
-    new("UIStroke",{Parent=root, Color=THEME.Accent, Thickness=1})
-    new("TextLabel",{Parent=root, Position=UDim2.new(0,12,0,6), Size=UDim2.new(1,-24,0,20), BackgroundTransparency=1, Text=title, Font=Enum.Font.GothamBold, TextSize=16, TextColor3=THEME.Text, TextXAlignment=Enum.TextXAlignment.Left})
-    new("TextLabel",{Parent=root, Position=UDim2.new(0,12,0,26), Size=UDim2.new(1,-24,0,30), BackgroundTransparency=1, Text=content, Font=Enum.Font.Gotham, TextSize=14, TextColor3=THEME.Text, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left})
-    task.delay(duration,function() pcall(function() gui:Destroy() end) end)
-end
+    -- Draggable Main Window
+    makeDraggable(Main, Topbar, false, {dragOffset, dragOffsetMobile})
 
--- GabGui library
-local GabGui = {}
-GabGui.__index = GabGui
+    -- Tween Main Window in
+    TweenService:Create(Main, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
 
-function GabGui:CreateWindow(opts)
-    opts = opts or {}
-    local name = opts.Name or "GabGui Window"
-    local size = opts.Size or THEME.WindowSize
-    local pos = opts.Position or UDim2.new(0.5, -size.X.Offset/2, 0.5, -size.Y.Offset/2)
-    local ScreenGui = new("ScreenGui",{Parent=PlayerGui, ResetOnSpawn=false, Name="GabGui_"..tostring(name)})
-    ScreenGui.IgnoreGuiInset = true
+    -- Create Tabs
+    local FirstTab
+    local Window = {}
+    function Window:CreateTab(Name, Image)
+        local TabButton = TabList.Template:Clone()
+        TabButton.Name = Name
+        TabButton.Title.Text = Name
+        TabButton.Parent = TabList
+        TabButton.BackgroundTransparency = 1
+        TabButton.Title.TextTransparency = 1
+        TabButton.Image.ImageTransparency = 1
+        TabButton.UIStroke.Transparency = 1
+        addPurpleGlow(TabButton)
 
-    local frame = new("Frame",{Parent=ScreenGui, Size=size, Position=pos, BackgroundColor3=THEME.Background, BorderSizePixel=0})
-    frame.Active = true
-    frame.Draggable = true
-    new("UICorner",{Parent=frame, CornerRadius=UDim.new(0, THEME.Corner)})
-    new("UIStroke",{Parent=frame, Color=THEME.Accent, Thickness=2})
+        -- Tab Page
+        local TabPage = Elements.Template:Clone()
+        TabPage.Name = Name
+        TabPage.Visible = true
+        TabPage.Parent = Elements
 
-    local header = new("Frame",{Parent=frame, Size=UDim2.new(1,0,0,34), BackgroundColor3=THEME.Header})
-    new("UICorner",{Parent=header, CornerRadius=UDim.new(0, THEME.Corner)})
-    local titleLabel = new("TextLabel",{Parent=header, Text=name, BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=16, Position=UDim2.new(0,12,0,0), Size=UDim2.new(1,-40,1,0), TextXAlignment=Enum.TextXAlignment.Left})
-    local closeBtn = new("TextButton",{Parent=header, Text="×", Size=UDim2.new(0,34,1,0), Position=UDim2.new(1,-34,0,0), BackgroundTransparency=1, TextColor3=Color3.fromRGB(255,100,100), Font=Enum.Font.GothamBold, TextSize=22})
-    closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
-
-    local tabBar = new("ScrollingFrame",{Parent=frame, Size=UDim2.new(1,-10,0,36), Position=UDim2.new(0,5,0,38), BackgroundTransparency=1, ScrollBarThickness=6, CanvasSize=UDim2.new(0,0,0,0), ScrollingDirection=Enum.ScrollingDirection.X})
-    tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-    tabBar.ScrollBarImageColor3 = THEME.Accent
-    tabBar.ScrollBarImageTransparency = 0.5
-    local tabList = new("UIListLayout",{Parent=tabBar})
-    tabList.FillDirection = Enum.FillDirection.Horizontal
-    tabList.Padding = UDim.new(0,6)
-    tabList.HorizontalAlignment = Enum.HorizontalAlignment.Left
-
-    local contentHolder = new("Frame",{Parent=frame, Size=UDim2.new(1,-10,1,-84), Position=UDim2.new(0,5,0,78), BackgroundTransparency=1})
-
-    local WindowObj = {}
-    WindowObj._tabs = {}
-    WindowObj.ActiveTab = nil
-
-    function WindowObj:CreateTab(title, icon)
-        local tabBtn = new("TextButton",{Parent=tabBar, Size=UDim2.new(0,110,1,0), BackgroundColor3=THEME.Button, Text=title, Font=Enum.Font.GothamSemibold, TextSize=14, TextColor3=THEME.Text})
-        new("UICorner",{Parent=tabBtn, CornerRadius=UDim.new(0,8)})
-        local tabPanel = new("ScrollingFrame",{Parent=contentHolder, Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,0), CanvasSize=UDim2.new(0,0,0,0), BackgroundTransparency=1, ScrollBarThickness=6})
-        tabPanel.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        tabPanel.Visible = false
-        local layout = new("UIListLayout",{Parent=tabPanel, Padding=UDim.new(0,8), SortOrder=Enum.SortOrder.LayoutOrder})
-
-        tabBtn.MouseButton1Click:Connect(function()
-            for _,t in ipairs(WindowObj._tabs) do
-                t.Panel.Visible = false
-                t.Button.BackgroundColor3 = THEME.Button
-            end
-            tabPanel.Visible = true
-            tabBtn.BackgroundColor3 = THEME.Accent
-            WindowObj.ActiveTab = title
-        end)
-
-        if #WindowObj._tabs == 0 then
-            tabPanel.Visible = true
-            tabBtn.BackgroundColor3 = THEME.Accent
-            WindowObj.ActiveTab = title
+        -- First Tab auto-select
+        if not FirstTab then
+            FirstTab = TabButton
+            Elements.UIPageLayout:JumpTo(TabPage)
+            TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
+            TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
         end
 
-        local TabObj = {}
-        TabObj.Button = tabBtn
-        TabObj.Panel = tabPanel
+        -- Tab click logic
+        TabButton.Interact.MouseButton1Click:Connect(function()
+            Elements.UIPageLayout:JumpTo(TabPage)
+            for _, OtherTab in ipairs(TabList:GetChildren()) do
+                if OtherTab.ClassName == "Frame" then
+                    OtherTab.BackgroundColor3 = SelectedTheme.TabBackground
+                    OtherTab.Title.TextColor3 = SelectedTheme.TabTextColor
+                end
+            end
+            TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
+            TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
+        end)
 
-        -- Section
-        function TabObj:CreateSection(title)
-            local sec = new("Frame",{Parent=tabPanel, Size=UDim2.new(1, -20, 0, 26), BackgroundTransparency=1})
-            new("TextLabel",{Parent=sec, Text=title or "", BackgroundTransparency=1, TextColor3=THEME.Text, Font=Enum.Font.GothamBold, TextSize=15, Size=UDim2.new(1,0,1,0), TextXAlignment=Enum.TextXAlignment.Left})
-            return TabObj
+        -- Return Tab for adding Buttons
+        local Tab = {}
+
+        -- Buttons inside Tab
+        function Tab:CreateButton(ButtonSettings)
+            local Button = Elements.Template.Button:Clone()
+            Button.Name = ButtonSettings.Name
+            Button.Title.Text = ButtonSettings.Name
+            Button.Parent = TabPage
+            Button.BackgroundTransparency = 1
+            Button.UIStroke.Transparency = 1
+            Button.Title.TextTransparency = 1
+            addPurpleGlow(Button)
+
+            -- Tween in
+            TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+            TweenService:Create(Button.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.3}):Play()
+            TweenService:Create(Button.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+
+            -- Button click
+            Button.Interact.MouseButton1Click:Connect(function()
+                local Success, Response = pcall(ButtonSettings.Callback)
+                if not Success then
+                    print("Callback Error:", Response)
+                    Button.Title.Text = "Error"
+                    task.wait(0.5)
+                    Button.Title.Text = ButtonSettings.Name
+                else
+                    TweenService:Create(Button, TweenInfo.new(0.3), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
+                    task.wait(0.2)
+                    TweenService:Create(Button, TweenInfo.new(0.3), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+                end
+            end)
+
+            -- Hover animations
+            Button.MouseEnter:Connect(function()
+                TweenService:Create(Button, TweenInfo.new(0.3), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
+            end)
+            Button.MouseLeave:Connect(function()
+                TweenService:Create(Button, TweenInfo.new(0.3), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+            end)
         end
 
-        -- Button
-function TabObj:CreateButton(data)
-    data = data or {}
+        return Tab
+    end
 
-    local btn = Instance.new("TextButton")
-    btn.Parent = tabPanel
-    btn.Size = UDim2.new(1, -20, 0, 36)
-    btn.BackgroundColor3 = THEME.Button
-    btn.Text = "  " .. (data.Name or "Button")
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.TextColor3 = THEME.Text
-    btn.AutoButtonColor = false
+    return Window
+end
 
-    -- 🟣 Rounded corners
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = btn
+function Tab:CreateColorPicker(ColorPickerSettings)
+    local ColorPicker = Elements.Template.ColorPicker:Clone()
+    local Background = ColorPicker.CPBackground
+    local Display = Background.Display
+    local Main = Background.MainCP
+    local Slider = ColorPicker.ColorSlider
+    local TweenService = game:GetService("TweenService")
+    local mouse = Players.LocalPlayer:GetMouse()
 
-    -- 🟣 Purple outline (Rayfield-style)
-    local stroke = Instance.new("UIStroke")
-    stroke.Parent = btn
-    stroke.Color = Color3.fromRGB(170, 0, 255)
-    stroke.Thickness = 1.6
-    stroke.Transparency = 0
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    ColorPicker.Name = ColorPickerSettings.Name
+    ColorPicker.Title.Text = ColorPickerSettings.Name
+    ColorPicker.Visible = true
+    ColorPicker.Parent = TabPage
+    ColorPicker.Size = UDim2.new(1, -10, 0, 45)
 
-    -- ⚠️ Click + callback safety
-    btn.MouseButton1Click:Connect(function()
-        local ok, err = pcall(function()
-            if data.Callback then
-                data.Callback()
-            end
-        end)
-        if not ok then
-            warn("[GabGui] Button callback error: " .. tostring(err))
-            btn.BackgroundColor3 = Color3.fromRGB(85, 0, 0)
-            task.wait(0.2)
-            btn.BackgroundColor3 = THEME.Button
+    -- Apply purple glow helper
+    local function addPurpleGlow(Frame)
+        if Frame:FindFirstChild("UIStroke") then
+            Frame.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+            Frame.UIStroke.Thickness = 2
+            Frame.UIStroke.Transparency = 0.3
+            Frame.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        end
+    end
+
+    -- Apply purple glow to main parts
+    addPurpleGlow(ColorPicker)
+    addPurpleGlow(Background)
+    addPurpleGlow(Main)
+    addPurpleGlow(Slider)
+
+    -- Initialize colors
+    local h, s, v = ColorPickerSettings.Color:ToHSV()
+    local opened, mainDragging, sliderDragging = false, false, false
+
+    -- Display updater
+    local function setDisplay()
+        Main.MainPoint.Position = UDim2.new(s, -Main.MainPoint.AbsoluteSize.X/2, 1-v, -Main.MainPoint.AbsoluteSize.Y/2)
+        Main.MainPoint.ImageColor3 = Color3.fromHSV(h, s, v)
+        Display.BackgroundColor3 = Color3.fromHSV(h, s, v)
+        Background.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+        local x = h * Slider.AbsoluteSize.X
+        Slider.SliderPoint.Position = UDim2.new(0, x - Slider.SliderPoint.AbsoluteSize.X/2, 0.5, 0)
+        Slider.SliderPoint.ImageColor3 = Color3.fromHSV(h, 1, 1)
+        local color = Color3.fromHSV(h, s, v)
+        ColorPicker.RGB.RInput.InputBox.Text = tostring(math.floor(color.R*255+0.5))
+        ColorPicker.RGB.GInput.InputBox.Text = tostring(math.floor(color.G*255+0.5))
+        ColorPicker.RGB.BInput.InputBox.Text = tostring(math.floor(color.B*255+0.5))
+        ColorPicker.HexInput.InputBox.Text = string.format("#%02X%02X%02X", color.R*255, color.G*255, color.B*255)
+    end
+
+    setDisplay()
+
+    -- Toggle open/close
+    ColorPicker.Interact.MouseButton1Down:Connect(function()
+        opened = not opened
+        if opened then
+            TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 120)}):Play()
+            TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 173, 0, 86), BackgroundTransparency = 0}):Play()
+            TweenService:Create(Main.MainPoint, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+        else
+            TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 45)}):Play()
+            TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 39, 0, 22), BackgroundTransparency = 1}):Play()
+            TweenService:Create(Main.MainPoint, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
         end
     end)
 
-    return btn
-end
+    -- Dragging logic
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            mainDragging = false
+            sliderDragging = false
+        end
+    end)
 
-        -- Toggle
-function TabObj:CreateToggle(data)
-	    data = data or {}
-	    local name = data.Name or "Toggle"
-	    local state = data.CurrentValue or false
-	
-	    -- Main container
-	    local container = new("Frame", {
-	        Parent = tabPanel,
-	        Size = UDim2.new(1, -20, 0, 36),
-	        BackgroundColor3 = THEME.Button,
-	        BackgroundTransparency = 1,
-	        BorderSizePixel = 0,
-	        ClipsDescendants = false
-	    })
-	    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
-	
-	    -- Main container glow outline
-	    local containerStroke = new("UIStroke", {
-	        Parent = container,
-	        Color = Color3.fromRGB(170, 0, 255),
-	        Transparency = 0.2,
-	        Thickness = 1.3
-	    })
-	
-	    -- Purple cover-flow glow behind container
-	    local glow = new("Frame", {
-	        Parent = container,
-	        Size = UDim2.new(1, 12, 1, 12),
-	        Position = UDim2.new(0, -6, 0, -6),
-	        BackgroundColor3 = Color3.fromRGB(180, 120, 255),
-	        BackgroundTransparency = 0.6,
-	        ZIndex = container.ZIndex - 1,
-	        BorderSizePixel = 0
-	    })
-	    new("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 8)})
-	
-	    -- Label
-	    local label = new("TextLabel", {
-	        Parent = container,
-	        Position = UDim2.new(0, 8, 0, 0),
-	        Size = UDim2.new(0.7, 0, 1, 0),
-	        BackgroundTransparency = 1,
-	        Text = name,
-	        TextXAlignment = Enum.TextXAlignment.Left,
-	        TextColor3 = THEME.Text,
-	        Font = Enum.Font.Gotham,
-	        TextSize = 14,
-	        TextTransparency = 1
-	    })
-	
-	    -- Switch & knob
-	    local switch = new("Frame", {
-	        Parent = container,
-	        Size = UDim2.new(0, 46, 0, 24),
-	        Position = UDim2.new(1, -56, 0.5, -12),
-	        BackgroundColor3 = THEME.ToggleOff,
-	        BorderSizePixel = 0
-	    })
-	    new("UICorner", {Parent = switch, CornerRadius = UDim.new(1, 0)}) -- Fully rounded switch
-	
-	    local knob = new("Frame", {
-	        Parent = switch,
-	        Size = UDim2.new(0, 20, 0, 20),
-	        Position = UDim2.new(0, 2, 0, 2),
-	        BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-	    })
-	    new("UICorner", {Parent = knob, CornerRadius = UDim.new(1, 0)}) -- Fully rounded knob
-	
-	    -- Switch outline (UIStroke)
-	    local stroke = new("UIStroke", {
-	        Parent = switch,
-	        Color = Color3.fromRGB(170, 0, 255), -- Purple color
-	        Transparency = 0.4,
-	        Thickness = 1.3
-	    })
-	
-	    -- Remove Outer Glow (ensure it’s not created)
-	    if outerGlow then
-	        outerGlow:Destroy()
-	    end
-	
-	    -- Fade-in animation
-	    TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-	    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-	    TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.25}):Play()
-	
-	    -- Function to set toggle state
-	    local function setState(s, noCb)
-	        state = s
-	        local pos = s and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2)
-	        local bg = s and THEME.ToggleOn or THEME.ToggleOff
-	        local strokeCol = Color3.fromRGB(170, 0, 255)
-	
-	        TweenService:Create(knob, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = pos}):Play()
-	        TweenService:Create(switch, TweenInfo.new(0.35, Enum.EasingStyle.Exponential), {BackgroundColor3 = bg}):Play()
-	        TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential), {Color = strokeCol}):Play()
-	        TweenService:Create(containerStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Transparency = s and 0.2 or 0.2}):Play()
-	
-	        if not noCb and data.Callback then
-	            local success, err = pcall(data.Callback, state)
-	            if not success then
-	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(255, 85, 85)}):Play()
-	                task.wait(0.5)
-	                TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
-	                warn("Toggle Callback Error: "..tostring(err))
-	            end
-	        end
-	    end
-	
-	    -- Hover animation
-	    container.MouseEnter:Connect(function()
-	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(55, 0, 110)}):Play()
-	        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.2}):Play()
-	    end)
-	    container.MouseLeave:Connect(function()
-	        TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = THEME.Button}):Play()
-	        TweenService:Create(containerStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = state and 0.2 or 0.2}):Play()
-	    end)
-	
-	    -- Click toggle
-	    switch.InputBegan:Connect(function(i)
-	        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-	            setState(not state)
-	        end
-	    end)
-	
-	    -- Initialize state
-	    setState(state, true)
-	
-	    return {
-	        Set = function(_, v) setState(v) end,
-	        Get = function() return state end
-	    }
-	end
-	
-	
-        -- Slider
-	function TabObj:CreateSlider(SliderSettings)
-			    local TweenService = game:GetService("TweenService")
-			    local UserInputService = game:GetService("UserInputService")
-			
-			    SliderSettings = SliderSettings or {}
-			    local name = SliderSettings.Name or "Slider"
-			    local min = (SliderSettings.Range and SliderSettings.Range[1]) or 0
-			    local max = (SliderSettings.Range and SliderSettings.Range[2]) or 100
-			    local inc = SliderSettings.Increment or 1
-			    local cur = SliderSettings.CurrentValue or min
-			    local suffix = SliderSettings.Suffix or ""
-			    local dragging = false
-			
-			    -- Purple dark container
-			    local container = new("Frame", {
-			        Parent = tabPanel,
-			        Size = UDim2.new(1, -20, 0, 48),
-			        BackgroundColor3 = Color3.fromRGB(40,40,50),
-			        BorderSizePixel = 0
-			    })
-			    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
-			    local stroke = new("UIStroke", {
-			        Parent = container,
-			        Color = Color3.fromRGB(170, 0, 255),
-			        Transparency = 0.3,
-			        Thickness = 1.4
-			    })
-			
-			    local label = new("TextLabel", {
-			        Parent = container,
-			        Size = UDim2.new(1, 0, 0, 18),
-			        Position = UDim2.new(0, 0, 0, 4),
-			        BackgroundTransparency = 1,
-			        Text = name .. " : " .. tostring(cur) .. (suffix ~= "" and " " .. suffix or ""),
-			        TextColor3 = THEME.Text,
-			        Font = Enum.Font.Gotham,
-			        TextSize = 14,
-			        TextXAlignment = Enum.TextXAlignment.Left
-			    })
-			
-			    local track = new("Frame", {
-			        Parent = container,
-			        Size = UDim2.new(1, -32, 0, 10),
-			        Position = UDim2.new(0, 16, 0, 30),
-			        BackgroundColor3 = Color3.fromRGB(50, 0, 90),
-			        BorderSizePixel = 0
-			    })
-			    new("UICorner", {Parent = track, CornerRadius = UDim.new(0, 6)})
-			    new("UIStroke", {
-			        Parent = track,
-			        Color = Color3.fromRGB(120, 0, 200),
-			        Transparency = 0.5
-			    })
-			
-			    local fill = new("Frame", {
-			        Parent = track,
-			        Size = UDim2.new((cur - min) / (max - min), 0, 1, 0),
-			        BackgroundColor3 = Color3.fromRGB(170, 0, 255),
-			        BorderSizePixel = 0
-			    })
-			    new("UICorner", {Parent = fill, CornerRadius = UDim.new(0, 6)})
-			    local fillStroke = new("UIStroke", {
-			        Parent = fill,
-			        Color = Color3.fromRGB(180, 0, 255),
-			        Transparency = 0.2
-			    })
-			
-			    -- Set value function
-			    local function setFromX(x)
-			        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-			        local raw = min + rel * (max - min)
-			        local stepped = math.floor((raw - min) / inc + 0.5) * inc + min
-			        stepped = math.clamp(stepped, min, max)
-			        cur = stepped
-			
-			        TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-			            Size = UDim2.new((stepped - min) / (max - min), 0, 1, 0)
-			        }):Play()
-			
-			        label.Text = name .. " : " .. tostring(stepped) .. (suffix ~= "" and " " .. suffix or "")
-			
-			        if SliderSettings.Callback then
-			            local ok, err = pcall(SliderSettings.Callback, stepped)
-			            if not ok then
-			                -- Red flash error animation
-			                TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
-			                task.wait(0.25)
-			                TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(25, 0, 45)}):Play()
-			                warn("[GabGui] Slider '" .. name .. "' callback error: " .. tostring(err))
-			            end
-			        end
-			    end
-			
-			    -- Hover effect
-			    container.MouseEnter:Connect(function()
-			        TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(35, 0, 70)}):Play()
-			    end)
-			    container.MouseLeave:Connect(function()
-			        TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(25, 0, 45)}):Play()
-			    end)
-			
-			    -- Drag logic
-			    track.InputBegan:Connect(function(i)
-			        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-			            dragging = true
-			            setFromX(i.Position.X)
-			            TweenService:Create(fillStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			        end
-			    end)
-			
-			    UserInputService.InputEnded:Connect(function(i)
-			        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-			            dragging = false
-			            TweenService:Create(fillStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.2}):Play()
-			        end
-			    end)
-			
-			    UserInputService.InputChanged:Connect(function(i)
-			        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-			            setFromX(i.Position.X)
-			        end
-			    end)
-			
-			    -- External control
-			    return {
-			        Set = function(_, v)
-			            if type(v) == "number" then
-			                v = math.clamp(v, min, max)
-			                cur = v
-			                TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-			                    Size = UDim2.new((v - min) / (max - min), 0, 1, 0)
-			                }):Play()
-			                label.Text = name .. " : " .. tostring(v) .. (suffix ~= "" and " " .. suffix or "")
-			                if SliderSettings.Callback then pcall(SliderSettings.Callback, v) end
-			            end
-			        end,
-			        Get = function() return cur end
-			    }
-			end
+    Main.MouseButton1Down:Connect(function()
+        if opened then mainDragging = true end
+    end)
+    Main.MainPoint.MouseButton1Down:Connect(function()
+        if opened then mainDragging = true end
+    end)
+    Slider.MouseButton1Down:Connect(function() sliderDragging = true end)
+    Slider.SliderPoint.MouseButton1Down:Connect(function() sliderDragging = true end)
 
-        -- Input Box
-function TabObj:CreateInput(data)
-				data = data or {}
-				local name = data.Name or "Input"
-				local placeholder = data.PlaceholderText or "Type here..."
-				local curVal = data.CurrentValue or ""
-				local callback = data.Callback
-			
-				-- Container (the whole input element)
-				local container = Instance.new("Frame")
-				container.Name = name .. "_Input"
-				container.Parent = tabPanel
-				container.Size = UDim2.new(1, -20, 0, 36)
-				container.BackgroundColor3 = Color3.fromRGB(40,40,50)
-				container.BackgroundTransparency = 1 -- fully transparent background
-				container.BorderSizePixel = 0
-			
-				local corner = Instance.new("UICorner", container)
-				corner.CornerRadius = UDim.new(0, 8)
-			
-				local stroke = Instance.new("UIStroke", container)
-				stroke.Color = Color3.fromRGB(160, 0, 255)
-				stroke.Transparency = 0.4
-				stroke.Thickness = 1.2
-			
-				-- Label (left side text)
-				local label = Instance.new("TextLabel")
-				label.Parent = container
-				label.BackgroundTransparency = 1
-				label.Size = UDim2.new(0.4, 0, 1, 0)
-				label.Text = name
-				label.Font = Enum.Font.Gotham
-				label.TextSize = 14
-				label.TextColor3 = THEME.Text
-				label.TextXAlignment = Enum.TextXAlignment.Left
-			
-				-- TextBox (the part you type in)
-				local box = Instance.new("TextBox")
-				box.Parent = container
-				box.Size = UDim2.new(0.55, -8, 0.8, 0)
-				box.Position = UDim2.new(0.4, 8, 0.1, 0)
-				box.BackgroundTransparency = 1 -- 💜 make it invisible
-				box.BorderSizePixel = 0
-				box.Text = curVal
-				box.PlaceholderText = placeholder
-				box.PlaceholderColor3 = Color3.fromRGB(160, 100, 220)
-				box.TextColor3 = THEME.Text
-				box.Font = Enum.Font.GothamBold
-				box.TextSize = 14
-				box.ClearTextOnFocus = false
-				box.TextXAlignment = Enum.TextXAlignment.Left
-			
-				-- Optional accent line under box
-				local underline = Instance.new("Frame", box)
-				underline.AnchorPoint = Vector2.new(0, 1)
-				underline.Position = UDim2.new(0, 0, 1, 0)
-				underline.Size = UDim2.new(1, 0, 0, 2)
-				underline.BackgroundColor3 = Color3.fromRGB(160, 0, 255)
-				underline.BackgroundTransparency = 0.4
-			
-				-- Hover effect (container)
-				container.MouseEnter:Connect(function()
-					TweenService:Create(underline, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-				end)
-			
-				container.MouseLeave:Connect(function()
-					TweenService:Create(underline, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.4}):Play()
-				end)
-			
-				-- Focus animation
-				box.Focused:Connect(function()
-					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
-					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(200, 0, 255)}):Play()
-				end)
-			
-				box.FocusLost:Connect(function(enterPressed)
-					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundTransparency = 0.4}):Play()
-					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(160, 0, 255)}):Play()
-			
-					if enterPressed and callback then
-						local ok, err = pcall(callback, box.Text)
-						if not ok then
-							warn("[GabGui] Input callback error:", err)
-						end
-					end
-				end)
-			
-				-- Return object (for external control)
-				local obj = {}
-				function obj:Set(text)
-					box.Text = text
-					if callback then pcall(callback, text) end
-				end
-				function obj:Get()
-					return box.Text
-				end
-			
-				return obj
-			end
+    -- RenderStepped updates
+    RunService.RenderStepped:Connect(function()
+        if mainDragging then
+            local localX = math.clamp(mouse.X - Main.AbsolutePosition.X, 0, Main.AbsoluteSize.X)
+            local localY = math.clamp(mouse.Y - Main.AbsolutePosition.Y, 0, Main.AbsoluteSize.Y)
+            s = localX / Main.AbsoluteSize.X
+            v = 1 - (localY / Main.AbsoluteSize.Y)
+            setDisplay()
+            pcall(function() ColorPickerSettings.Callback(Color3.fromHSV(h, s, v)) end)
+        end
+        if sliderDragging then
+            local localX = math.clamp(mouse.X - Slider.AbsolutePosition.X, 0, Slider.AbsoluteSize.X)
+            h = localX / Slider.AbsoluteSize.X
+            setDisplay()
+            pcall(function() ColorPickerSettings.Callback(Color3.fromHSV(h, s, v)) end)
+        end
+    end)
 
-        -- Dropdown
-function TabObj:CreateDropdown(data)
-		data = data or {}
-		local name = data.Name or "Dropdown"
-		local options = data.Options or {}
-		if #options == 0 then return end
-	
-		local multi = data.MultipleOptions or false
-		local selected = multi and {} or { data.CurrentOption or options[1] }
-		local maxVisible = data.MaxVisibleOptions or 5
-		local open = false
-	
-		-- Create main dropdown container (GabGui purple-glow style)
-		local container = new("Frame", {
-			Parent = tabPanel,
-			Size = UDim2.new(1, -20, 0, 36),
-			BackgroundColor3 = THEME.Button,
-			BorderSizePixel = 0,
-			ClipsDescendants = false
-		})
-		new("UICorner", { Parent = container, CornerRadius = UDim.new(0, 8) })
-	
-		-- Purple accent UIStroke
-		local stroke = new("UIStroke", {
-			Parent = container,
-			Color = Color3.fromRGB(170, 0, 255),
-			Transparency = 0.2,
-			Thickness = 1.3
-		})
-	
-		local label = new("TextLabel", {
-			Parent = container,
-			Size = UDim2.new(0.6, 0, 1, 0),
-			BackgroundTransparency = 1,
-			Text = name,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = THEME.Text,
-			Font = Enum.Font.Gotham,
-			TextSize = 14
-		})
-	
-		local btn = new("TextButton", {
-			Parent = container,
-			Size = UDim2.new(0.4, -4, 1, 0),
-			Position = UDim2.new(0.6, 4, 0, 0),
-			Text = selected[1] or "None ▼",
-			BackgroundTransparency = 1,
-			TextColor3 = THEME.Text,
-			Font = Enum.Font.GothamBold,
-			TextSize = 14
-		})
-	
-		-- 🔹 Dropdown list panel now uses ScrollingFrame
-		local dropdownFrame = new("ScrollingFrame", {
-			Parent = tabPanel,
-			Size = UDim2.new(1, -20, 0, 0),
-			BackgroundColor3 = THEME.Button,
-			BorderSizePixel = 0,
-			Visible = false,
-			ScrollBarThickness = 4,
-			ScrollBarImageColor3 = Color3.fromRGB(180, 120, 255),
-			CanvasSize = UDim2.new(0, 0, 0, 0),
-			AutomaticCanvasSize = Enum.AutomaticSize.Y,
-			ClipsDescendants = true
-		})
-		new("UICorner", { Parent = dropdownFrame, CornerRadius = UDim.new(0, 8) })
-	
-		local dropStroke = new("UIStroke", {
-			Parent = dropdownFrame,
-			Color = Color3.fromRGB(140, 0, 255),
-			Transparency = 0.4
-		})
-	
-		local listLayout = new("UIListLayout", {
-			Parent = dropdownFrame,
-			Padding = UDim.new(0, 2)
-		})
-		listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			dropdownFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 8)
-		end)
-	
-		-- TweenService alias
-		local TweenService = game:GetService("TweenService")
-	
-		-- Update button text depending on selection
-		local function updateBtnText()
-			if multi then
-				if #selected == 0 then
-					btn.Text = "None ▼"
-				elseif #selected == 1 then
-					btn.Text = selected[1] .. " ▼"
-				else
-					btn.Text = selected[1] .. " + " .. (#selected - 1) .. " ▼"
-				end
-			else
-				btn.Text = (selected[1] or "None") .. " ▼"
-			end
-		end
-	
-		-- Create option buttons
-		for _, option in ipairs(options) do
-			local optBtn = new("TextButton", {
-				Parent = dropdownFrame,
-				Size = UDim2.new(1, 0, 0, 28),
-				Text = option,
-				BackgroundColor3 = THEME.Button,
-				TextColor3 = THEME.Text,
-				Font = Enum.Font.Gotham,
-				TextSize = 14,
-				BackgroundTransparency = 1
-			})
-			new("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 6) })
-			local optStroke = new("UIStroke", {
-				Parent = optBtn,
-				Color = Color3.fromRGB(150, 0, 255),
-				Transparency = 1
-			})
-	
-			-- Hover effect (gentle glow)
-			optBtn.MouseEnter:Connect(function()
-				TweenService:Create(optBtn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = Color3.fromRGB(60, 0, 100)
-				}):Play()
-				TweenService:Create(optStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-					Transparency = 0.2
-				}):Play()
-			end)
-			optBtn.MouseLeave:Connect(function()
-				TweenService:Create(optBtn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = THEME.Button
-				}):Play()
-				TweenService:Create(optStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-					Transparency = 1
-				}):Play()
-			end)
-	
-			-- Click logic + color tween
-			optBtn.MouseButton1Click:Connect(function()
-				if multi then
-					local found = table.find(selected, option)
-					if found then
-						table.remove(selected, found)
-					else
-						table.insert(selected, option)
-					end
-				else
-					selected = { option }
-					open = false
-					TweenService:Create(dropdownFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						Size = UDim2.new(1, -20, 0, 0)
-					}):Play()
-					task.wait(0.25)
-					dropdownFrame.Visible = false
-				end
-	
-				updateBtnText()
-				for _, b in ipairs(dropdownFrame:GetChildren()) do
-					if b:IsA("TextButton") then
-						local selectedState = table.find(selected, b.Text)
-						local colorGoal = selectedState and Color3.fromRGB(180, 120, 255) or THEME.Button
-						local strokeGoal = selectedState and 0.2 or 1
-						TweenService:Create(b, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-							BackgroundColor3 = colorGoal
-						}):Play()
-						TweenService:Create(b.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-							Transparency = strokeGoal
-						}):Play()
-					end
-				end
-				if data.Callback then pcall(data.Callback, multi and selected or selected[1]) end
-			end)
-		end
-	
-		-- Open / Close dropdown (Rayfield-style fade + resize)
-		btn.MouseButton1Click:Connect(function()
-			open = not open
-			if open then
-				dropdownFrame.Visible = true
-				local totalHeight = math.min(#options, maxVisible) * 30 + 6
-				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = Color3.fromRGB(50, 0, 90)
-				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					Transparency = 0
-				}):Play()
-				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
-					Size = UDim2.new(1, -20, 0, totalHeight)
-				}):Play()
-			else
-				TweenService:Create(dropdownFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
-					Size = UDim2.new(1, -20, 0, 0)
-				}):Play()
-				task.wait(0.35)
-				dropdownFrame.Visible = false
-				TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = THEME.Button
-				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					Transparency = 0.2
-				}):Play()
-			end
-		end)
-	
-		return {
-			Get = function()
-				return multi and selected or selected[1]
-			end,
-			Set = function(_, v)
-				selected = multi and v or { v }
-				updateBtnText()
-			end
-		}
-	end
+    -- Mouse hover glow
+    ColorPicker.MouseEnter:Connect(function()
+        TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
+    end)
+    ColorPicker.MouseLeave:Connect(function()
+        TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+    end)
 
--- Keybind
-function TabObj:CreateKeybind(data)
-		data = data or {}
-		local name = data.Name or "Keybind"
-		local key = data.CurrentKeybind or "Q"
-		local hold = data.HoldToInteract or false
-	
-		local TweenService = game:GetService("TweenService")
-		local UserInputService = game:GetService("UserInputService")
-		local RunService = game:GetService("RunService")
-	
-		local container = new("Frame", {
-			Parent = tabPanel,
-			Size = UDim2.new(1, -20, 0, 36),
-			BackgroundColor3 = THEME.Button,
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0
-		})
-		new("UICorner", { Parent = container, CornerRadius = UDim.new(0, 8) })
-		local stroke = new("UIStroke", {
-			Parent = container,
-			Color = Color3.fromRGB(170, 0, 255),
-			Transparency = 1,
-			Thickness = 1.3
-		})
-	
-		local label = new("TextLabel", {
-			Parent = container,
-			Position = UDim2.new(0, 8, 0, 0),
-			Size = UDim2.new(0.7, 0, 1, 0),
-			BackgroundTransparency = 1,
-			Text = name,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = THEME.Text,
-			Font = Enum.Font.Gotham,
-			TextSize = 14,
-			TextTransparency = 1
-		})
-	
-		-- 🔹 Fully transparent TextBox for typing/pressing keys
-		local box = new("TextBox", {
-			Parent = container,
-			Size = UDim2.new(0.3, -8, 1, 0),
-			Position = UDim2.new(0.7, 4, 0, 0),
-			Text = key,
-			PlaceholderText = "",
-			ClearTextOnFocus = false,
-			BackgroundTransparency = 9999, -- completely invisible
-			TextColor3 = THEME.Text,
-			Font = Enum.Font.GothamBold,
-			TextSize = 14
-		})
-	
-		local boxStroke = new("UIStroke", {
-			Parent = box,
-			Color = Color3.fromRGB(150, 0, 255),
-			Transparency = 1
-		})
-	
-		-- Fade-in animation
-		TweenService:Create(container, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.25 }):Play()
-		TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
-		TweenService:Create(boxStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
-	
-		-- Hover glow
-		container.MouseEnter:Connect(function()
-			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
-				BackgroundColor3 = Color3.fromRGB(55, 0, 110)
-			}):Play()
-		end)
-		container.MouseLeave:Connect(function()
-			TweenService:Create(container, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {
-				BackgroundColor3 = THEME.Button
-			}):Play()
-		end)
-	
-		-- Focus effects
-		box.Focused:Connect(function()
-			TweenService:Create(boxStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0 }):Play()
-			TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-				BackgroundColor3 = Color3.fromRGB(70, 0, 130)
-			}):Play()
-		end)
-		box.FocusLost:Connect(function()
-			TweenService:Create(boxStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
-			TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-				BackgroundColor3 = THEME.Button
-			}):Play()
-	
-			if box.Text ~= "" then
-				key = string.upper(box.Text)
-				if data.Callback then pcall(data.Callback, key) end
-			end
-		end)
-	
-		-- Press detection (still works even if you type manually)
-		UserInputService.InputBegan:Connect(function(input, gp)
-			if gp then return end
-	
-			if box:IsFocused() then
-				if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode ~= Enum.KeyCode.Unknown then
-					key = input.KeyCode.Name
-					box.Text = key
-					box:ReleaseFocus()
-					TweenService:Create(box, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), { TextColor3 = Color3.fromRGB(200, 150, 255) }):Play()
-					task.delay(0.25, function()
-						TweenService:Create(box, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { TextColor3 = THEME.Text }):Play()
-					end)
-					if data.Callback then pcall(data.Callback, key) end
-				end
-			elseif input.UserInputType == Enum.UserInputType.Keyboard then
-				if input.KeyCode.Name == key then
-					if hold then
-						local held = true
-						local conn; conn = input.Changed:Connect(function(prop)
-							if prop == "UserInputState" then
-								conn:Disconnect()
-								held = false
-								if data.Callback then pcall(data.Callback, false) end
-							end
-						end)
-						while held do
-							if data.Callback then pcall(data.Callback, true) end
-							RunService.Stepped:Wait()
-						end
-					else
-						if data.Callback then pcall(data.Callback, key) end
-					end
-				end
-			end
-		end)
-	
-		return {
-			Get = function()
-				return key
-			end,
-			Set = function(_, v)
-				key = v
-				box.Text = v
-			end
-		}
-	end
-
--- Label
-function TabObj:CreateLabel(text,color,font,bold)
-    local lbl = new("TextLabel",{Parent=tabPanel, Size=UDim2.new(1,-20,0,28), BackgroundTransparency=1, Text=text or "", TextColor3=color or THEME.Text, Font=font or Enum.Font.Gotham, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
-    return lbl
-end
-
--- Paragraph
-function TabObj:CreateParagraph(data)
-    data = data or {}
-    local titleText = data.Title or "Paragraph Title"
-    local contentText = data.Content or "Paragraph content here."
-
-    -- Create the main paragraph frame
-    local frame = new("Frame", {
-        Parent = tabPanel,
-        BackgroundColor3 = THEME.Button,
-        Size = UDim2.new(1, -20, 0, 0), -- auto-size later
-        BorderSizePixel = 0
-    })
-
-    -- Purple outline
-    new("UIStroke", {
-        Parent = frame,
-        Color = THEME.Accent,
-        Thickness = 1.8
-    })
-
-    -- Rounded corners
-    new("UICorner", {
-        Parent = frame,
-        CornerRadius = UDim.new(0, 8)
-    })
-
-    -- Title
-    local title = new("TextLabel", {
-        Parent = frame,
-        Size = UDim2.new(1, -10, 0, 18),
-        Position = UDim2.new(0, 8, 0, 5),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        Text = titleText,
-        TextColor3 = THEME.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextSize = 14
-    })
-
-    -- Content
-    local content = new("TextLabel", {
-        Parent = frame,
-        Size = UDim2.new(1, -16, 0, 0),
-        Position = UDim2.new(0, 8, 0, 24),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.Gotham,
-        Text = contentText,
-        TextColor3 = THEME.Text,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextSize = 14
-    })
-
-    -- Auto-size the frame to fit text
-    local function resize()
-        local textService = game:GetService("TextService")
-        local textBounds = textService:GetTextSize(content.Text, content.TextSize, content.Font, Vector2.new(frame.AbsoluteSize.X - 20, math.huge))
-        frame.Size = UDim2.new(1, -20, 0, textBounds.Y + 35)
-        content.Size = UDim2.new(1, -16, 0, textBounds.Y)
+    -- Set function for external updates
+    function ColorPickerSettings:Set(RGBColor)
+        ColorPickerSettings.Color = RGBColor
+        h, s, v = RGBColor:ToHSV()
+        setDisplay()
     end
 
-    resize()
-    content:GetPropertyChangedSignal("Text"):Connect(resize)
+    return ColorPickerSettings
+end
 
-    -- Support Paragraph:Set({...})
+function Tab:CreateSection(SectionName)
+    local SectionValue = {}
+
+    if SDone then
+        local SectionSpace = Elements.Template.SectionSpacing:Clone()
+        SectionSpace.Visible = true
+        SectionSpace.Parent = TabPage
+    end
+
+    local Section = Elements.Template.SectionTitle:Clone()
+    Section.Title.Text = SectionName
+    Section.Visible = true
+    Section.Parent = TabPage
+
+    -- Purple glow
+    if Section:FindFirstChild("UIStroke") then
+        Section.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        Section.UIStroke.Thickness = 2
+        Section.UIStroke.Transparency = 0.3
+        Section.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
+
+    Section.Title.TextTransparency = 1
+    TweenService:Create(Section.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.4}):Play()
+
+    function SectionValue:Set(NewSection)
+        Section.Title.Text = NewSection
+    end
+
+    SDone = true
+    return SectionValue
+end
+
+function Tab:CreateDivider()
+    local DividerValue = {}
+
+    local Divider = Elements.Template.Divider:Clone()
+    Divider.Visible = true
+    Divider.Parent = TabPage
+
+    -- Purple glow
+    if Divider:FindFirstChild("UIStroke") then
+        Divider.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        Divider.UIStroke.Thickness = 2
+        Divider.UIStroke.Transparency = 0.3
+        Divider.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
+
+    Divider.Divider.BackgroundTransparency = 1
+    TweenService:Create(Divider.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.85}):Play()
+
+    function DividerValue:Set(Value)
+        Divider.Visible = Value
+    end
+
+    return DividerValue
+end
+
+function Tab:CreateLabel(LabelText : string, Icon: number, Color : Color3, IgnoreTheme : boolean)
+    local LabelValue = {}
+    local Label = Elements.Template.Label:Clone()
+    Label.Title.Text = LabelText
+    Label.Visible = true
+    Label.Parent = TabPage
+
+    -- Purple glow
+    if Label:FindFirstChild("UIStroke") then
+        Label.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        Label.UIStroke.Thickness = 2
+        Label.UIStroke.Transparency = 0.3
+        Label.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
+
+    Label.BackgroundColor3 = Color or SelectedTheme.SecondaryElementBackground
+    Label.Title.TextTransparency = 1
+    Label.BackgroundTransparency = 1
+
+    -- Existing icon logic remains
+    if Icon then
+        Label.Icon.Visible = true
+        -- set image logic...
+    end
+
+    -- Fade-in tweens
+    TweenService:Create(Label, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = Color and 0.8 or 0}):Play()
+    TweenService:Create(Label.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = Color and 0.7 or 0}):Play()
+    TweenService:Create(Label.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = Color and 0.2 or 0}):Play()
+
+    function LabelValue:Set(NewLabel, Icon, Color)
+        Label.Title.Text = NewLabel
+        if Color then
+            Label.BackgroundColor3 = Color
+            Label.UIStroke.Color = Color
+        end
+    end
+
+    GabGui.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
+        Label.BackgroundColor3 = IgnoreTheme and (Color or Label.BackgroundColor3) or SelectedTheme.SecondaryElementBackground
+        Label.UIStroke.Color = IgnoreTheme and (Color or Label.BackgroundColor3) or SelectedTheme.SecondaryElementStroke
+    end)
+
+    return LabelValue
+end
+
+function Tab:CreateParagraph(ParagraphSettings)
     local ParagraphValue = {}
 
-    function ParagraphValue:Set(NewParagraphSettings)
-        title.Text = NewParagraphSettings.Title or titleText
-        content.Text = NewParagraphSettings.Content or contentText
-		resize()
+    local Paragraph = Elements.Template.Paragraph:Clone()
+    Paragraph.Title.Text = ParagraphSettings.Title
+    Paragraph.Content.Text = ParagraphSettings.Content
+    Paragraph.Visible = true
+    Paragraph.Parent = TabPage
+
+    Paragraph.BackgroundTransparency = 1
+    Paragraph.UIStroke.Transparency = 1
+    Paragraph.Title.TextTransparency = 1
+    Paragraph.Content.TextTransparency = 1
+
+    Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+
+    -- Purple glow
+    if Paragraph:FindFirstChild("UIStroke") then
+        Paragraph.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        Paragraph.UIStroke.Thickness = 2
+        Paragraph.UIStroke.Transparency = 0.3
+        Paragraph.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
+
+    TweenService:Create(Paragraph, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(Paragraph.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+    TweenService:Create(Paragraph.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()    
+    TweenService:Create(Paragraph.Content, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()    
+
+    function ParagraphValue:Set(NewParagraphSettings)
+        Paragraph.Title.Text = NewParagraphSettings.Title
+        Paragraph.Content.Text = NewParagraphSettings.Content
+    end
+
+    GabGui.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
+        Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+        if Paragraph:FindFirstChild("UIStroke") then
+            Paragraph.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        end
+    end)
 
     return ParagraphValue
 end
 
-		
+function Tab:CreateInput(InputSettings)
+    local Input = Elements.Template.Input:Clone()
+    Input.Name = InputSettings.Name
+    Input.Title.Text = InputSettings.Name
+    Input.Visible = true
+    Input.Parent = TabPage
 
-table.insert(WindowObj._tabs, TabObj)
-return TabObj
+    Input.BackgroundTransparency = 1
+    Input.UIStroke.Transparency = 1
+    Input.Title.TextTransparency = 1
+
+    Input.InputFrame.InputBox.Text = InputSettings.CurrentValue or ''
+
+    Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
+
+    -- Purple glow
+    if Input.InputFrame:FindFirstChild("UIStroke") then
+        Input.InputFrame.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        Input.InputFrame.UIStroke.Thickness = 2
+        Input.InputFrame.UIStroke.Transparency = 0.3
+        Input.InputFrame.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
+
+    TweenService:Create(Input, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(Input.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
+    TweenService:Create(Input.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()    
+
+    Input.InputFrame.InputBox.PlaceholderText = InputSettings.PlaceholderText
+    Input.InputFrame.Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+
+    Input.InputFrame.InputBox.FocusLost:Connect(function()
+        local Success, Response = pcall(function()
+            InputSettings.Callback(Input.InputFrame.InputBox.Text)
+            InputSettings.CurrentValue = Input.InputFrame.InputBox.Text
+        end)
+
+        if not Success then
+            TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
+            TweenService:Create(Input.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+            Input.Title.Text = "Callback Error"
+            task.wait(0.5)
+            Input.Title.Text = InputSettings.Name
+            TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+            TweenService:Create(Input.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.3}):Play()
+        end
+
+        if InputSettings.RemoveTextAfterFocusLost then
+            Input.InputFrame.InputBox.Text = ""
+        end
+
+        if not InputSettings.Ext then
+            SaveConfiguration()
+        end
+    end)
+
+    Input.MouseEnter:Connect(function()
+        TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
+    end)
+
+    Input.MouseLeave:Connect(function()
+        TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+    end)
+
+    Input.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+        TweenService:Create(Input.InputFrame, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)}):Play()
+    end)
+
+    function InputSettings:Set(text)
+        Input.InputFrame.InputBox.Text = text
+        InputSettings.CurrentValue = text
+        pcall(function() InputSettings.Callback(text) end)
+        if not InputSettings.Ext then
+            SaveConfiguration()
+        end
+    end
+
+    if Settings.ConfigurationSaving and Settings.ConfigurationSaving.Enabled and InputSettings.Flag then
+        GabGuiLibrary.Flags[InputSettings.Flag] = InputSettings
+    end
+
+    GabGui.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
+        Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
+        if Input.InputFrame:FindFirstChild("UIStroke") then
+            Input.InputFrame.UIStroke.Color = Color3.fromRGB(148, 0, 211)
+        end
+    end)
+
+    return InputSettings
 end
 
--- Notification function
-function WindowObj:Notify(data)
-    GabGuiNotify(data)
-end
 
-return WindowObj
-end
 
--- Expose notification globally
-GabGui.Notify = GabGuiNotify
 
--- Return the library
-return GabGui
+
+
+
+
+
+
+
+
+
