@@ -912,7 +912,7 @@ function TabObj:CreateParagraph(data)
 		    local titleText = data.Title or "Title"
 		    local contentText = data.Content or ""
 		
-		    -- 🟣 Container
+		    -- 🟣 Main container
 		    local frame = new("Frame", {
 		        Parent = tabPanel,
 		        Size = UDim2.new(1, -20, 0, 80),
@@ -951,7 +951,14 @@ function TabObj:CreateParagraph(data)
 		        TextYAlignment = Enum.TextYAlignment.Top
 		    })
 		
-		    -- 🟣 Object controls
+		    -- 🟣 Auto adjust height based on text
+		    task.defer(function()
+		        local textSize = game:GetService("TextService"):GetTextSize(contentText, 13, Enum.Font.Gotham, Vector2.new(content.AbsoluteSize.X, math.huge))
+		        local totalHeight = math.clamp(textSize.Y + 40, 60, 200)
+		        frame.Size = UDim2.new(1, -20, 0, totalHeight)
+		    end)
+		
+		    -- 🟣 Return object with Set support
 		    local obj = {}
 		    function obj:Set(newData)
 		        if newData.Title then
@@ -959,8 +966,18 @@ function TabObj:CreateParagraph(data)
 		        end
 		        if newData.Content then
 		            content.Text = newData.Content
+		
+		            -- resize dynamically again
+		            local textSize = game:GetService("TextService"):GetTextSize(newData.Content, 13, Enum.Font.Gotham, Vector2.new(content.AbsoluteSize.X, math.huge))
+		            local totalHeight = math.clamp(textSize.Y + 40, 60, 200)
+		            frame.Size = UDim2.new(1, -20, 0, totalHeight)
 		        end
 		    end
+		
+		    -- return both for compatibility
+		    obj.Frame = frame
+		    obj.Title = title
+		    obj.Content = content
 		
 		    return obj
 		end
