@@ -908,104 +908,81 @@ end
 
 -- Paragraph
 function TabObj:CreateParagraph(data)
-		    data = data or {}
-		    local titleText = data.Title or "Paragraph Title"
-		    local contentText = data.Content or "Paragraph content here."
-		
-		    -- Create the main paragraph frame
-		    local frame = new("Frame", {
-		        Parent = tabPanel,
-		        BackgroundColor3 = THEME.Button,
-		        Size = UDim2.new(1, -20, 0, 0), -- auto-size later
-		        BorderSizePixel = 0
-		    })
-		
-		    -- Purple outline
-		    new("UIStroke", {
-		        Parent = frame,
-		        Color = THEME.Accent,
-		        Thickness = 1.8
-		    })
-		
-		    -- Rounded corners
-		    new("UICorner", {
-		        Parent = frame,
-		        CornerRadius = UDim.new(0, 8)
-		    })
-		
-		    -- Title
-		    local title = new("TextLabel", {
-		        Parent = frame,
-		        Size = UDim2.new(1, -10, 0, 18),
-		        Position = UDim2.new(0, 8, 0, 5),
-		        BackgroundTransparency = 1,
-		        Font = Enum.Font.GothamBold,
-		        Text = titleText,
-		        TextColor3 = THEME.Text,
-		        TextXAlignment = Enum.TextXAlignment.Left,
-		        TextSize = 14
-		    })
-		
-		    -- Content
-		    local content = new("TextLabel", {
-		        Parent = frame,
-		        Size = UDim2.new(1, -16, 0, 0),
-		        Position = UDim2.new(0, 8, 0, 24),
-		        BackgroundTransparency = 1,
-		        Font = Enum.Font.Gotham,
-		        Text = contentText,
-		        TextColor3 = THEME.Text,
-		        TextWrapped = true,
-		        TextXAlignment = Enum.TextXAlignment.Left,
-		        TextSize = 14
-		    })
-		
-		    -- Auto-size the frame to fit text
-		    local function resize()
-		        local textService = game:GetService("TextService")
-		        local textSize = textService:GetTextSize(content.Text, content.TextSize, content.Font, Vector2.new(frame.AbsoluteSize.X - 20, math.huge))
-		        frame.Size = UDim2.new(1, -20, 0, textSize.Y + 35)
-		        content.Size = UDim2.new(1, -16, 0, textSize.Y)
-		    end
-		
-		    resize()
-		    content:GetPropertyChangedSignal("Text"):Connect(resize)
-		
-		    -- Support Paragraph:Set({...})
-		    local ParagraphObj = {
-		        Set = function(self, newData)
-		            if newData.Title then
-		                if title then
-		                    title.Text = newData.Title
-		                else
-		                    warn("Title is nil")
-		                end
-		            end
-		
-		            if newData.Content then
-		                if content then
-		                    content.Text = newData.Content
-		                    task.defer(function()
-		                        local textService = game:GetService("TextService")
-		                        local textSize = textService:GetTextSize(
-		                            content.Text,
-		                            content.TextSize,
-		                            content.Font,
-		                            Vector2.new(frame.AbsoluteSize.X - 16, math.huge)
-		                        )
-		                        content.Size = UDim2.new(1, -16, 0, textSize.Y)
-		                        frame.Size = UDim2.new(1, -20, 0, textSize.Y + 35)
-		                    end)
-		                else
-		                    warn("Content is nil")
-		                end
-		            end
-		        end
-		    }
-		
-		    return ParagraphObj
-		end
-		
+    data = data or {}
+    local titleText = data.Title or "Paragraph Title"
+    local contentText = data.Content or "Paragraph content here."
+
+    -- Create the main paragraph frame
+    local frame = new("Frame", {
+        Parent = tabPanel,
+        BackgroundColor3 = THEME.Button,
+        Size = UDim2.new(1, -20, 0, 0), -- auto-size later
+        BorderSizePixel = 0
+    })
+
+    -- Purple outline
+    new("UIStroke", {
+        Parent = frame,
+        Color = THEME.Accent,
+        Thickness = 1.8
+    })
+
+    -- Rounded corners
+    new("UICorner", {
+        Parent = frame,
+        CornerRadius = UDim.new(0, 8)
+    })
+
+    -- Title
+    local title = new("TextLabel", {
+        Parent = frame,
+        Size = UDim2.new(1, -10, 0, 18),
+        Position = UDim2.new(0, 8, 0, 5),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = titleText,
+        TextColor3 = THEME.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextSize = 14
+    })
+
+    -- Content
+    local content = new("TextLabel", {
+        Parent = frame,
+        Size = UDim2.new(1, -16, 0, 0),
+        Position = UDim2.new(0, 8, 0, 24),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Gotham,
+        Text = contentText,
+        TextColor3 = THEME.Text,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextSize = 14
+    })
+
+    -- Auto-size the frame to fit text
+    local function resize()
+        local textService = game:GetService("TextService")
+        local textBounds = textService:GetTextSize(content.Text, content.TextSize, content.Font, Vector2.new(frame.AbsoluteSize.X - 20, math.huge))
+        frame.Size = UDim2.new(1, -20, 0, textBounds.Y + 35)
+        content.Size = UDim2.new(1, -16, 0, textBounds.Y)
+    end
+
+    resize()
+    content:GetPropertyChangedSignal("Text"):Connect(resize)
+
+    -- Support Paragraph:Set({...})
+    local ParagraphValue = {}
+
+    function ParagraphValue:Set(NewParagraphSettings)
+        title.Text = NewParagraphSettings.Title or titleText
+        content.Text = NewParagraphSettings.Content or contentText
+		resize()
+    end
+
+    return ParagraphValue
+end
+
 		
 
 table.insert(WindowObj._tabs, TabObj)
