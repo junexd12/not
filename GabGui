@@ -405,23 +405,131 @@ function TabObj:CreateToggle(data)
 			end
 
         -- Input Box
-        function TabObj:CreateInput(data)
-            data = data or {}
-            local name = data.Name or "Input"
-            local placeholder = data.PlaceholderText or ""
-            local curVal = data.CurrentValue or ""
-            local removeAfterFocusLost = data.RemoveTextAfterFocusLost or false
-            local container = new("Frame",{Parent=tabPanel, Size=UDim2.new(1,-20,0,36), BackgroundColor3=THEME.Button})
-            new("UICorner",{Parent=container, CornerRadius=UDim.new(0,8)})
-            local label = new("TextLabel",{Parent=container, Position=UDim2.new(0,8,0,0), Size=UDim2.new(0.4,0,1,0), BackgroundTransparency=1, Text=name, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14})
-            local box = new("TextBox",{Parent=container, Position=UDim2.new(0.4,8,0.1,0), Size=UDim2.new(0.55,-8,0.8,0), Text=curVal, PlaceholderText=placeholder, BackgroundColor3=Color3.fromRGB(60,60,70), TextColor3=THEME.Text, Font=Enum.Font.Gotham, TextSize=14, ClearTextOnFocus=false})
-            new("UICorner",{Parent=box, CornerRadius=UDim.new(0,6)})
-            box.FocusLost:Connect(function(enterPressed)
-                if enterPressed and data.Callback then pcall(data.Callback, box.Text) end
-                if removeAfterFocusLost then box.Text = "" end
-            end)
-            return box
-        end
+function Tab:CreateInput(InputSettings)
+				local TweenService = game:GetService("TweenService")
+			
+				local Input = Elements.Template.Input:Clone()
+				Input.Name = InputSettings.Name
+				Input.Title.Text = InputSettings.Name
+				Input.Visible = true
+				Input.Parent = TabPage
+			
+				Input.BackgroundTransparency = 1
+				Input.UIStroke.Transparency = 1
+				Input.Title.TextTransparency = 1
+			
+				Input.InputFrame.InputBox.Text = InputSettings.CurrentValue or ""
+				Input.InputFrame.InputBox.PlaceholderText = InputSettings.PlaceholderText or ""
+			
+				Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
+				Input.InputFrame.UIStroke.Color = SelectedTheme.InputStroke
+			
+				-- fade in animation
+				TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
+				TweenService:Create(Input.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+				TweenService:Create(Input.Title, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
+			
+				-- initial size
+				Input.InputFrame.Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+			
+				-- hover glow
+				Input.MouseEnter:Connect(function()
+					TweenService:Create(Input, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackgroundHover }):Play()
+				end)
+				Input.MouseLeave:Connect(function()
+					TweenService:Create(Input, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackground }):Play()
+				end)
+			
+				-- dynamic width change
+				Input.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+					}):Play()
+				end)
+			
+				-- focus animations
+				Input.InputFrame.InputBox.Focused:Connect(function()
+					TweenService:Create(Input.InputFrame.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.1 }):Play()
+					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = SelectedTheme.InputBackgroundFocused or Color3.fromRGB(50, 0, 90)
+					}):Play()
+				end)
+			
+				Input.InputFrame.InputBox.FocusLost:Connect(function(enterPressed)
+					TweenService:Create(Input.InputFrame.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
+					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = SelectedTheme.InputBackground
+					}):Play()
+			
+					local Success, Response = pcall(function()
+						if enterPressed and InputSettings.Callback then
+							InputSettings.Callback(Input.InputFrame.InputBox.Text)
+						end
+						InputSettings.CurrentValue = Input.InputFrame.InputBox.Text
+					end)
+			
+					if not Success then
+						TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundColor3 = Color3.fromRGB(85, 0, 0) }):Play()
+						Input.Title.Text = "Callback Error"
+						print("GabGui | " .. InputSettings.Name .. " Callback Error: " .. tostring(Response))
+						task.wait(0.5)
+						Input.Title.Text = InputSettings.Name
+						TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackground }):Play()
+					end
+			
+					if InputSettings.RemoveTextAfterFocusLost then
+						Input.InputFrame.InputBox.Text = ""
+					end
+			
+					if not InputSettings.Ext then
+						SaveConfiguration()
+					end
+				end)
+			
+				-- ✨ Fixed Set() method (triggers callback + animation)
+				function InputSettings:Set(text)
+					Input.InputFrame.InputBox.Text = tostring(text)
+					InputSettings.CurrentValue = text
+			
+					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = SelectedTheme.InputBackgroundFocused or Color3.fromRGB(50, 0, 90)
+					}):Play()
+					task.delay(0.3, function()
+						TweenService:Create(Input.InputFrame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
+							BackgroundColor3 = SelectedTheme.InputBackground
+						}):Play()
+					end)
+			
+					local Success, Response = pcall(function()
+						if InputSettings.Callback then
+							InputSettings.Callback(text)
+						end
+					end)
+			
+					if not Success then
+						warn("GabGui | Input Callback Error: " .. tostring(Response))
+					end
+			
+					if not InputSettings.Ext then
+						SaveConfiguration()
+					end
+				end
+			
+				-- optional config saving
+				if Settings.ConfigurationSaving then
+					if Settings.ConfigurationSaving.Enabled and InputSettings.Flag then
+						GabGuiLibrary.Flags[InputSettings.Flag] = InputSettings
+					end
+				end
+			
+				-- theme update hook
+				GabGui.Main:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+					Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
+					Input.InputFrame.UIStroke.Color = SelectedTheme.InputStroke
+				end)
+			
+				return InputSettings
+			end
 
         -- Dropdown
 function TabObj:CreateDropdown(data)
