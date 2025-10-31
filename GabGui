@@ -405,125 +405,122 @@ function TabObj:CreateToggle(data)
 			end
 
         -- Input Box
-function TabObj:CreateInput(InputSettings)
-				local TweenService = game:GetService("TweenService")
+	function TabObj:CreateInput(data)
+				data = data or {}
+				local name = data.Name or "Input"
+				local placeholder = data.PlaceholderText or "Type here..."
+				local curVal = data.CurrentValue or ""
+				local transparent = data.Transparent or false
+				local callback = data.Callback
 			
+				-- 🟣 Main container
+				local container = Instance.new("Frame")
+				container.Name = name .. "_Input"
+				container.Parent = tabPanel
+				container.Size = UDim2.new(1, -20, 0, 36)
+				container.BackgroundColor3 = THEME.Button
+				container.BackgroundTransparency = transparent and 1 or 0
+				container.BorderSizePixel = 0
 			
-				Input.BackgroundTransparency = 1
-				Input.UIStroke.Transparency = 1
-				Input.Title.TextTransparency = 1
+				local corner = Instance.new("UICorner", container)
+				corner.CornerRadius = UDim.new(0, 8)
 			
-				Input.InputFrame.InputBox.Text = InputSettings.CurrentValue or ""
-				Input.InputFrame.InputBox.PlaceholderText = InputSettings.PlaceholderText or ""
+				local stroke = Instance.new("UIStroke", container)
+				stroke.Color = Color3.fromRGB(170, 0, 255)
+				stroke.Transparency = 0.4
+				stroke.Thickness = 1.3
 			
-				Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
-				Input.InputFrame.UIStroke.Color = SelectedTheme.InputStroke
+				-- 🟣 Label
+				local label = Instance.new("TextLabel")
+				label.Parent = container
+				label.BackgroundTransparency = 1
+				label.Size = UDim2.new(0.4, 0, 1, 0)
+				label.Text = name
+				label.Font = Enum.Font.Gotham
+				label.TextSize = 14
+				label.TextColor3 = THEME.Text
+				label.TextXAlignment = Enum.TextXAlignment.Left
 			
-				-- fade in animation
-				TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-				TweenService:Create(Input.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
-				TweenService:Create(Input.Title, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
+				-- 🟣 Input Box
+				local box = Instance.new("TextBox")
+				box.Parent = container
+				box.Size = UDim2.new(0.55, -8, 0.8, 0)
+				box.Position = UDim2.new(0.4, 8, 0.1, 0)
+				box.BackgroundColor3 = Color3.fromRGB(35, 0, 80)
+				box.BackgroundTransparency = transparent and 1 or 0
+				box.BorderSizePixel = 0
+				box.Text = curVal
+				box.PlaceholderText = placeholder
+				box.PlaceholderColor3 = Color3.fromRGB(160, 100, 220)
+				box.TextColor3 = THEME.Text
+				box.Font = Enum.Font.GothamBold
+				box.TextSize = 14
+				box.ClearTextOnFocus = false
 			
-				-- initial size
-				Input.InputFrame.Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+				local boxCorner = Instance.new("UICorner", box)
+				boxCorner.CornerRadius = UDim.new(0, 6)
 			
-				-- hover glow
-				Input.MouseEnter:Connect(function()
-					TweenService:Create(Input, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackgroundHover }):Play()
-				end)
-				Input.MouseLeave:Connect(function()
-					TweenService:Create(Input, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackground }):Play()
-				end)
+				local boxStroke = Instance.new("UIStroke", box)
+				boxStroke.Color = Color3.fromRGB(150, 0, 255)
+				boxStroke.Transparency = 0.5
 			
-				-- dynamic width change
-				Input.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
-					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
-					}):Play()
-				end)
-			
-				-- focus animations
-				Input.InputFrame.InputBox.Focused:Connect(function()
-					TweenService:Create(Input.InputFrame.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.1 }):Play()
-					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						BackgroundColor3 = SelectedTheme.InputBackgroundFocused or Color3.fromRGB(50, 0, 90)
-					}):Play()
-				end)
-			
-				Input.InputFrame.InputBox.FocusLost:Connect(function(enterPressed)
-					TweenService:Create(Input.InputFrame.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), { Transparency = 0.4 }):Play()
-					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						BackgroundColor3 = SelectedTheme.InputBackground
-					}):Play()
-			
-					local Success, Response = pcall(function()
-						if enterPressed and InputSettings.Callback then
-							InputSettings.Callback(Input.InputFrame.InputBox.Text)
-						end
-						InputSettings.CurrentValue = Input.InputFrame.InputBox.Text
-					end)
-			
-					if not Success then
-						TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundColor3 = Color3.fromRGB(85, 0, 0) }):Play()
-						Input.Title.Text = "Callback Error"
-						print("GabGui | " .. InputSettings.Name .. " Callback Error: " .. tostring(Response))
-						task.wait(0.5)
-						Input.Title.Text = InputSettings.Name
-						TweenService:Create(Input, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundColor3 = SelectedTheme.ElementBackground }):Play()
-					end
-			
-					if InputSettings.RemoveTextAfterFocusLost then
-						Input.InputFrame.InputBox.Text = ""
-					end
-			
-					if not InputSettings.Ext then
-						SaveConfiguration()
-					end
-				end)
-			
-				-- ✨ Fixed Set() method (triggers callback + animation)
-				function InputSettings:Set(text)
-					Input.InputFrame.InputBox.Text = tostring(text)
-					InputSettings.CurrentValue = text
-			
-					TweenService:Create(Input.InputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-						BackgroundColor3 = SelectedTheme.InputBackgroundFocused or Color3.fromRGB(50, 0, 90)
-					}):Play()
-					task.delay(0.3, function()
-						TweenService:Create(Input.InputFrame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {
-							BackgroundColor3 = SelectedTheme.InputBackground
+				-- 🟣 Hover effect
+				container.MouseEnter:Connect(function()
+					if not transparent then
+						TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+							BackgroundColor3 = Color3.fromRGB(55, 0, 110)
 						}):Play()
-					end)
-			
-					local Success, Response = pcall(function()
-						if InputSettings.Callback then
-							InputSettings.Callback(text)
-						end
-					end)
-			
-					if not Success then
-						warn("GabGui | Input Callback Error: " .. tostring(Response))
 					end
-			
-					if not InputSettings.Ext then
-						SaveConfiguration()
-					end
-				end
-			
-				-- optional config saving
-				if Settings.ConfigurationSaving then
-					if Settings.ConfigurationSaving.Enabled and InputSettings.Flag then
-						GabGuiLibrary.Flags[InputSettings.Flag] = InputSettings
-					end
-				end
-			
-				-- theme update hook
-				GabGui.Main:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
-					Input.InputFrame.BackgroundColor3 = SelectedTheme.InputBackground
-					Input.InputFrame.UIStroke.Color = SelectedTheme.InputStroke
 				end)
 			
-				return InputSettings
+				container.MouseLeave:Connect(function()
+					if not transparent then
+						TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+							BackgroundColor3 = THEME.Button
+						}):Play()
+					end
+				end)
+			
+				-- 🟣 Focus Animations
+				box.Focused:Connect(function()
+					TweenService:Create(boxStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
+					TweenService:Create(box, TweenInfo.new(0.3), {
+						BackgroundColor3 = Color3.fromRGB(70, 0, 140)
+					}):Play()
+				end)
+			
+				box.FocusLost:Connect(function(enterPressed)
+					TweenService:Create(boxStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
+					TweenService:Create(box, TweenInfo.new(0.3), {
+						BackgroundColor3 = Color3.fromRGB(35, 0, 80)
+					}):Play()
+			
+					if enterPressed and callback then
+						local ok, err = pcall(callback, box.Text)
+						if not ok then
+							warn("[GabGui] Input callback error:", err)
+							TweenService:Create(container, TweenInfo.new(0.3), {
+								BackgroundColor3 = Color3.fromRGB(85, 0, 0)
+							}):Play()
+							task.wait(0.3)
+							TweenService:Create(container, TweenInfo.new(0.3), {
+								BackgroundColor3 = THEME.Button
+							}):Play()
+						end
+					end
+				end)
+			
+				-- 🟣 Return object with Set/Get support
+				local obj = {}
+				function obj:Set(text)
+					box.Text = text
+					if callback then pcall(callback, text) end
+				end
+				function obj:Get()
+					return box.Text
+				end
+			
+				return obj
 			end
 
         -- Dropdown
