@@ -405,7 +405,7 @@ function TabObj:CreateToggle(data)
 			end
 
         -- Input Box
-function Tab:CreateInput(InputSettings)
+function TabObj:CreateInput(InputSettings)
 				local TweenService = game:GetService("TweenService")
 			
 				local Input = Elements.Template.Input:Clone()
