@@ -130,7 +130,7 @@ function TabObj:CreateButton(data)
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 14
-    btn.TextColor3 = Color3.fromRGB(200, 100, 255) -- soft purple text
+    btn.TextColor3 = THEME.Text
     btn.AutoButtonColor = false
 
     -- 🟣 Rounded corners
