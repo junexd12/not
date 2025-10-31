@@ -408,11 +408,6 @@ function TabObj:CreateToggle(data)
 function TabObj:CreateInput(InputSettings)
 				local TweenService = game:GetService("TweenService")
 			
-				local Input = Elements.Template.Input:Clone()
-				Input.Name = InputSettings.Name
-				Input.Title.Text = InputSettings.Name
-				Input.Visible = true
-				Input.Parent = TabPage
 			
 				Input.BackgroundTransparency = 1
 				Input.UIStroke.Transparency = 1
