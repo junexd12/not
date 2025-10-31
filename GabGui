@@ -120,85 +120,81 @@ function GabGui:CreateWindow(opts)
 
         -- Button
 function TabObj:CreateButton(data)
-			data = data or {}
-			local name = data.Name or "Button"
-			local callback = data.Callback or function() end
-		
-			-- 🟣 Main container (transparent)
-			local btn = Instance.new("TextButton")
-			btn.Name = name .. "_Button"
-			btn.Parent = tabPanel
-			btn.Size = UDim2.new(1, -20, 0, 36)
-			btn.BackgroundColor3 = Color3.fromRGB(40, 0, 70)
-			btn.BackgroundTransparency = 0.5
-			btn.Text = "  " .. name
-			btn.TextXAlignment = Enum.TextXAlignment.Left
-			btn.Font = Enum.Font.GothamBold
-			btn.TextSize = 14
-			btn.TextColor3 = THEME.Text
-			btn.AutoButtonColor = false
-		
-			local corner = Instance.new("UICorner", btn)
-			corner.CornerRadius = UDim.new(0, 8)
-		
-			local stroke = Instance.new("UIStroke", btn)
-			stroke.Color = Color3.fromRGB(180, 0, 255)
-			stroke.Thickness = 1.2
-			stroke.Transparency = 0.3
-		
-			-- 🟣 Hover animation
-			btn.MouseEnter:Connect(function()
-				TweenService:Create(btn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = Color3.fromRGB(65, 0, 120),
-					BackgroundTransparency = 0.3
-				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0.15}):Play()
-			end)
-		
-			btn.MouseLeave:Connect(function()
-				TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					BackgroundColor3 = Color3.fromRGB(40, 0, 70),
-					BackgroundTransparency = 0.5
-				}):Play()
-				TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0.3}):Play()
-			end)
-		
-			-- 🟣 Click animation + callback
-			btn.MouseButton1Click:Connect(function()
-				TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Exponential), {
-					BackgroundTransparency = 0.2
-				}):Play()
-				task.wait(0.15)
-				TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-					BackgroundTransparency = 0.5
-				}):Play()
-		
-				local ok, err = pcall(callback)
-				if not ok then
-					warn("[GabGui] Button callback error:", err)
-					TweenService:Create(btn, TweenInfo.new(0.2), {
-						BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+				data = data or {}
+				local name = data.Name or "Button"
+			
+				-- 🟣 Create button
+				local btn = new("TextButton", {
+					Parent = tabPanel,
+					Size = UDim2.new(1, -20, 0, 36),
+					BackgroundColor3 = THEME.Button,
+					Text = "  " .. name,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Font = Enum.Font.Gotham,
+					TextSize = 14,
+					TextColor3 = THEME.Text,
+					AutoButtonColor = false
+				})
+			
+				new("UICorner", {Parent = btn, CornerRadius = UDim.new(0, 8)})
+			
+				-- 🟣 Add purple outline
+				local stroke = new("UIStroke", {
+					Parent = btn,
+					Color = Color3.fromRGB(170, 0, 255),
+					Thickness = 1.3,
+					Transparency = 0.3
+				})
+			
+				-- 🟣 Hover animation
+				btn.MouseEnter:Connect(function()
+					TweenService:Create(btn, TweenInfo.new(0.25, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = Color3.fromRGB(60, 0, 110)
 					}):Play()
-					task.wait(0.3)
-					TweenService:Create(btn, TweenInfo.new(0.3), {
-						BackgroundColor3 = Color3.fromRGB(40, 0, 70)
+					TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0.1}):Play()
+				end)
+			
+				btn.MouseLeave:Connect(function()
+					TweenService:Create(btn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
+						BackgroundColor3 = THEME.Button
 					}):Play()
+					TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0.3}):Play()
+				end)
+			
+				-- 🟣 Click handler
+				btn.MouseButton1Click:Connect(function()
+					local ok, err = pcall(data.Callback)
+					if not ok then
+						warn("[GabGui] Button callback error:", err)
+						TweenService:Create(btn, TweenInfo.new(0.2), {
+							BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+						}):Play()
+						task.wait(0.3)
+						TweenService:Create(btn, TweenInfo.new(0.3), {
+							BackgroundColor3 = THEME.Button
+						}):Play()
+					else
+						TweenService:Create(btn, TweenInfo.new(0.15), {
+							BackgroundTransparency = 0.1
+						}):Play()
+						task.wait(0.1)
+						TweenService:Create(btn, TweenInfo.new(0.3), {
+							BackgroundTransparency = 0
+						}):Play()
+					end
+				end)
+			
+				-- 🟣 Return object
+				local obj = {}
+				function obj:Set(text)
+					btn.Text = "  " .. tostring(text)
 				end
-			end)
-		
-			-- 🟣 Return object for control
-			local obj = {}
-		
-			function obj:Set(text)
-				btn.Text = "  " .. tostring(text)
+				function obj:Get()
+					return btn.Text
+				end
+			
+				return obj
 			end
-		
-			function obj:Get()
-				return btn.Text
-			end
-		
-			return obj
-		end
 
         -- Toggle
 function TabObj:CreateToggle(data)
