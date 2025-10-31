@@ -405,32 +405,31 @@ function TabObj:CreateToggle(data)
 			end
 
         -- Input Box
-	function TabObj:CreateInput(data)
+function TabObj:CreateInput(data)
 				data = data or {}
 				local name = data.Name or "Input"
 				local placeholder = data.PlaceholderText or "Type here..."
 				local curVal = data.CurrentValue or ""
-				local transparent = data.Transparent or false
 				local callback = data.Callback
 			
-				-- 🟣 Main container
+				-- Container (the whole input element)
 				local container = Instance.new("Frame")
 				container.Name = name .. "_Input"
 				container.Parent = tabPanel
 				container.Size = UDim2.new(1, -20, 0, 36)
 				container.BackgroundColor3 = THEME.Button
-				container.BackgroundTransparency = transparent and 1 or 0
+				container.BackgroundTransparency = 1 -- fully transparent background
 				container.BorderSizePixel = 0
 			
 				local corner = Instance.new("UICorner", container)
 				corner.CornerRadius = UDim.new(0, 8)
 			
 				local stroke = Instance.new("UIStroke", container)
-				stroke.Color = Color3.fromRGB(170, 0, 255)
+				stroke.Color = Color3.fromRGB(160, 0, 255)
 				stroke.Transparency = 0.4
-				stroke.Thickness = 1.3
+				stroke.Thickness = 1.2
 			
-				-- 🟣 Label
+				-- Label (left side text)
 				local label = Instance.new("TextLabel")
 				label.Parent = container
 				label.BackgroundTransparency = 1
@@ -441,13 +440,12 @@ function TabObj:CreateToggle(data)
 				label.TextColor3 = THEME.Text
 				label.TextXAlignment = Enum.TextXAlignment.Left
 			
-				-- 🟣 Input Box
+				-- TextBox (the part you type in)
 				local box = Instance.new("TextBox")
 				box.Parent = container
 				box.Size = UDim2.new(0.55, -8, 0.8, 0)
 				box.Position = UDim2.new(0.4, 8, 0.1, 0)
-				box.BackgroundColor3 = Color3.fromRGB(35, 0, 80)
-				box.BackgroundTransparency = transparent and 1 or 0
+				box.BackgroundTransparency = 1 -- 💜 make it invisible
 				box.BorderSizePixel = 0
 				box.Text = curVal
 				box.PlaceholderText = placeholder
@@ -456,61 +454,44 @@ function TabObj:CreateToggle(data)
 				box.Font = Enum.Font.GothamBold
 				box.TextSize = 14
 				box.ClearTextOnFocus = false
+				box.TextXAlignment = Enum.TextXAlignment.Left
 			
-				local boxCorner = Instance.new("UICorner", box)
-				boxCorner.CornerRadius = UDim.new(0, 6)
+				-- Optional accent line under box
+				local underline = Instance.new("Frame", box)
+				underline.AnchorPoint = Vector2.new(0, 1)
+				underline.Position = UDim2.new(0, 0, 1, 0)
+				underline.Size = UDim2.new(1, 0, 0, 2)
+				underline.BackgroundColor3 = Color3.fromRGB(160, 0, 255)
+				underline.BackgroundTransparency = 0.4
 			
-				local boxStroke = Instance.new("UIStroke", box)
-				boxStroke.Color = Color3.fromRGB(150, 0, 255)
-				boxStroke.Transparency = 0.5
-			
-				-- 🟣 Hover effect
+				-- Hover effect (container)
 				container.MouseEnter:Connect(function()
-					if not transparent then
-						TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-							BackgroundColor3 = Color3.fromRGB(55, 0, 110)
-						}):Play()
-					end
+					TweenService:Create(underline, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 				end)
 			
 				container.MouseLeave:Connect(function()
-					if not transparent then
-						TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {
-							BackgroundColor3 = THEME.Button
-						}):Play()
-					end
+					TweenService:Create(underline, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.4}):Play()
 				end)
 			
-				-- 🟣 Focus Animations
+				-- Focus animation
 				box.Focused:Connect(function()
-					TweenService:Create(boxStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-					TweenService:Create(box, TweenInfo.new(0.3), {
-						BackgroundColor3 = Color3.fromRGB(70, 0, 140)
-					}):Play()
+					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(200, 0, 255)}):Play()
 				end)
 			
 				box.FocusLost:Connect(function(enterPressed)
-					TweenService:Create(boxStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
-					TweenService:Create(box, TweenInfo.new(0.3), {
-						BackgroundColor3 = Color3.fromRGB(35, 0, 80)
-					}):Play()
+					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundTransparency = 0.4}):Play()
+					TweenService:Create(underline, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(160, 0, 255)}):Play()
 			
 					if enterPressed and callback then
 						local ok, err = pcall(callback, box.Text)
 						if not ok then
 							warn("[GabGui] Input callback error:", err)
-							TweenService:Create(container, TweenInfo.new(0.3), {
-								BackgroundColor3 = Color3.fromRGB(85, 0, 0)
-							}):Play()
-							task.wait(0.3)
-							TweenService:Create(container, TweenInfo.new(0.3), {
-								BackgroundColor3 = THEME.Button
-							}):Play()
 						end
 					end
 				end)
 			
-				-- 🟣 Return object with Set/Get support
+				-- Return object (for external control)
 				local obj = {}
 				function obj:Set(text)
 					box.Text = text
