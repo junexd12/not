@@ -907,7 +907,7 @@ function TabObj:CreateLabel(text,color,font,bold)
 end
 
 -- Paragraph
-function TabObj:CreateParagraph(data)
+	function TabObj:CreateParagraph(data)
 		    data = data or {}
 		    local titleText = data.Title or "Paragraph Title"
 		    local contentText = data.Content or "Paragraph content here."
@@ -974,20 +974,22 @@ function TabObj:CreateParagraph(data)
 		    -- Support Paragraph:Set({...})
 		    local ParagraphObj = {}
 		
+		    -- Capture title and content in the scope of ParagraphObj:Set
 		    function ParagraphObj:Set(newData)
-    task.defer(function()
-        if newData.Title then
-            title.Text = newData.Title
-        end
-        if newData.Content then
-            content.Text = newData.Content
-            resize()
-        end
-    end)
-end
+		        task.defer(function()
+		            if newData.Title then
+		                title.Text = newData.Title
+		            end
+		            if newData.Content then
+		                content.Text = newData.Content
+		                resize()
+		            end
+		        end)
+		    end
 		
 		    return ParagraphObj
 		end
+		
 
 table.insert(WindowObj._tabs, TabObj)
 return TabObj
