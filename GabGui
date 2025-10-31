@@ -120,48 +120,49 @@ function GabGui:CreateWindow(opts)
 
         -- Button
 function TabObj:CreateButton(data)
-		    data = data or {}
-		
-		    local btn = new("TextButton", {
-		        Parent = tabPanel,
-		        Size = UDim2.new(1, -20, 0, 36),
-		        BackgroundColor3 = THEME.Button,
-		        Text = "  " .. (data.Name or "Button"),
-		        TextXAlignment = Enum.TextXAlignment.Left,
-		        Font = Enum.Font.Gotham,
-		        TextSize = 14,
-		        TextColor3 = THEME.Text,
-		        AutoButtonColor = false
-		    })
-		
-		    -- 🟣 Rounded corners
-		    new("UICorner", {
-		        Parent = btn,
-		        CornerRadius = UDim.new(0, 8)
-		    })
-		
-		    -- 🟣 Purple outline
-		    new("UIStroke", {
-		        Parent = btn,
-		        Color = Color3.fromRGB(170, 0, 255),
-		        Thickness = 1.4,
-		        Transparency = 0.25
-		    })
-		
-		    -- ⚠️ Safe callback with warning
-		    btn.MouseButton1Click:Connect(function()
-		        local ok, err = pcall(function()
-		            if data.Callback then
-		                data.Callback()
-		            end
-		        end)
-		        if not ok then
-		            warn("[GabGui] Button '" .. (data.Name or "Unnamed") .. "' callback error:", err)
-		        end
-		    end)
-		
-		    return btn
-		end
+    data = data or {}
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = tabPanel
+    btn.Size = UDim2.new(1, -20, 0, 36)
+    btn.BackgroundColor3 = THEME.Button
+    btn.Text = "  " .. (data.Name or "Button")
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.fromRGB(200, 100, 255) -- soft purple text
+    btn.AutoButtonColor = false
+
+    -- 🟣 Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    -- 🟣 Purple outline (Rayfield-style)
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = btn
+    stroke.Color = Color3.fromRGB(170, 0, 255)
+    stroke.Thickness = 1.6
+    stroke.Transparency = 0
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    -- ⚠️ Click + callback safety
+    btn.MouseButton1Click:Connect(function()
+        local ok, err = pcall(function()
+            if data.Callback then
+                data.Callback()
+            end
+        end)
+        if not ok then
+            warn("[GabGui] Button callback error: " .. tostring(err))
+            btn.BackgroundColor3 = Color3.fromRGB(85, 0, 0)
+            task.wait(0.2)
+            btn.BackgroundColor3 = THEME.Button
+        end
+    end)
+
+    return btn
+end
 
         -- Toggle
 function TabObj:CreateToggle(data)
