@@ -120,82 +120,47 @@ function GabGui:CreateWindow(opts)
 
         -- Button
 function TabObj:CreateButton(data)
-			data = data or {}
-			local name = data.Name or "Button"
+		    data = data or {}
 		
-			-- 🟣 Button container
-			local btn = new("TextButton", {
-				Parent = tabPanel,
-				Size = UDim2.new(1, -20, 0, 36),
-				BackgroundColor3 = THEME.Button,
-				Text = "  " .. name,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Font = Enum.Font.Gotham,
-				TextSize = 14,
-				TextColor3 = THEME.Text,
-				AutoButtonColor = false
-			})
+		    local btn = new("TextButton", {
+		        Parent = tabPanel,
+		        Size = UDim2.new(1, -20, 0, 36),
+		        BackgroundColor3 = THEME.Button,
+		        Text = "  " .. (data.Name or "Button"),
+		        TextXAlignment = Enum.TextXAlignment.Left,
+		        Font = Enum.Font.Gotham,
+		        TextSize = 14,
+		        TextColor3 = THEME.Text,
+		        AutoButtonColor = false
+		    })
 		
-			new("UICorner", {Parent = btn, CornerRadius = UDim.new(0, 8)})
+		    -- 🟣 Rounded corners
+		    new("UICorner", {
+		        Parent = btn,
+		        CornerRadius = UDim.new(0, 8)
+		    })
 		
-			-- 🟣 Purple outline (UIStroke)
-			local stroke = new("UIStroke", {
-				Parent = btn,
-				Color = Color3.fromRGB(170, 0, 255),
-				Thickness = 1.4,
-				Transparency = 0.25
-			})
+		    -- 🟣 Purple outline
+		    new("UIStroke", {
+		        Parent = btn,
+		        Color = Color3.fromRGB(170, 0, 255),
+		        Thickness = 1.4,
+		        Transparency = 0.25
+		    })
 		
-			-- 🟣 “Click” icon (finger / cursor style)
-			local icon = new("ImageLabel", {
-				Parent = btn,
-				AnchorPoint = Vector2.new(1, 0.5),
-				Position = UDim2.new(1, -8, 0.5, 0),
-				Size = UDim2.new(0, 18, 0, 18),
-				Image = "rbxassetid://7072718362", -- 🔹 subtle cursor icon (you can change this)
-				BackgroundTransparency = 1,
-				ImageColor3 = Color3.fromRGB(200, 150, 255),
-				ImageTransparency = 0.25
-			})
+		    -- ⚠️ Safe callback with warning
+		    btn.MouseButton1Click:Connect(function()
+		        local ok, err = pcall(function()
+		            if data.Callback then
+		                data.Callback()
+		            end
+		        end)
+		        if not ok then
+		            warn("[GabGui] Button '" .. (data.Name or "Unnamed") .. "' callback error:", err)
+		        end
+		    end)
 		
-			-- 🟣 Hover effect
-			btn.MouseEnter:Connect(function()
-				TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0}):Play()
-				TweenService:Create(icon, TweenInfo.new(0.25), {ImageTransparency = 0}):Play()
-			end)
-		
-			btn.MouseLeave:Connect(function()
-				TweenService:Create(stroke, TweenInfo.new(0.25), {Transparency = 0.25}):Play()
-				TweenService:Create(icon, TweenInfo.new(0.25), {ImageTransparency = 0.25}):Play()
-			end)
-		
-			-- 🟣 Click effect
-			btn.MouseButton1Click:Connect(function()
-				TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(70, 0, 130)}):Play()
-				task.wait(0.15)
-				TweenService:Create(btn, TweenInfo.new(0.25), {BackgroundColor3 = THEME.Button}):Play()
-		
-				if data.Callback then
-					local ok, err = pcall(data.Callback)
-					if not ok then
-						warn("[GabGui] Button callback error:", err)
-						TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(120, 0, 0)}):Play()
-						task.wait(0.3)
-						TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = THEME.Button}):Play()
-					end
-				end
-			end)
-		
-			-- 🟣 Return object (Set / Get)
-			local obj = {}
-			function obj:Set(text)
-				btn.Text = "  " .. tostring(text)
-			end
-			function obj:Get()
-				return btn.Text
-			end
-		
-			return obj
+		    return btn
 		end
 
         -- Toggle
