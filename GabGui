@@ -975,14 +975,16 @@ function TabObj:CreateParagraph(data)
 		    local ParagraphObj = {}
 		
 		    function ParagraphObj:Set(newData)
-		        if newData.Title then
-		            title.Text = newData.Title
-		        end
-		        if newData.Content then
-		            content.Text = newData.Content
-		            resize()
-		        end
-		    end
+    task.defer(function()
+        if newData.Title then
+            title.Text = newData.Title
+        end
+        if newData.Content then
+            content.Text = newData.Content
+            resize()
+        end
+    end)
+end
 		
 		    return ParagraphObj
 		end
