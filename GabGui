@@ -281,7 +281,7 @@ function TabObj:CreateToggle(data)
 			    local container = new("Frame", {
 			        Parent = tabPanel,
 			        Size = UDim2.new(1, -20, 0, 48),
-			        BackgroundColor3 = Color3.fromRGB(30, 30, 40),
+			        BackgroundColor3 = Color3.fromRGB(40,40,50),
 			        BorderSizePixel = 0
 			    })
 			    new("UICorner", {Parent = container, CornerRadius = UDim.new(0, 8)})
@@ -417,7 +417,7 @@ function TabObj:CreateInput(data)
 				container.Name = name .. "_Input"
 				container.Parent = tabPanel
 				container.Size = UDim2.new(1, -20, 0, 36)
-				container.BackgroundColor3 = THEME.Button
+				container.BackgroundColor3 = Color3.fromRGB(40,40,50),
 				container.BackgroundTransparency = 1 -- fully transparent background
 				container.BorderSizePixel = 0
 			
