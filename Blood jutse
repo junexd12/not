@@ -1,0 +1,138 @@
+-- Blood Jutsu: Gen Toggle (Final Edition by Grandmaster Gab)
+-- Client-side | place in StarterPlayerScripts or a ScreenGui
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+local gui = Instance.new("ScreenGui")
+gui.Name = ""
+gui.ResetOnSpawn = false
+gui.Parent = PlayerGui
+
+-- Draggable Circle Toggle Button
+local button = Instance.new("ImageButton")
+button.Name = "BloodJutsuToggle"
+button.Size = UDim2.new(0, 70, 0, 70)
+button.Position = UDim2.new(0.1, 0, 0.7, 0)
+button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+button.BackgroundTransparency = 0.2
+button.AnchorPoint = Vector2.new(0.5, 0.5)
+button.AutoButtonColor = false
+button.Parent = gui
+
+-- Make draggable
+local dragging, dragInput, startPos, startInputPos
+button.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		startInputPos = input.Position
+		startPos = button.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+button.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - startInputPos
+		button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Blood Jutsu core
+local active = false
+local connections = {}
+local effects = {}
+
+local function createBillboard(hum)
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 70, 0, 25)
+	bb.StudsOffset = Vector3.new(0, 3, 0)
+	bb.AlwaysOnTop = true
+	local txt = Instance.new("TextLabel")
+	txt.Size = UDim2.new(1, 0, 1, 0)
+	txt.BackgroundTransparency = 1
+	txt.TextColor3 = Color3.fromRGB(255, 0, 0)
+	txt.TextStrokeTransparency = 0
+	txt.Font = Enum.Font.GothamBold
+	txt.TextScaled = true
+	txt.Text = tostring(math.floor(hum.Health)) .. "%"
+	txt.Parent = bb
+	return bb, txt
+end
+
+local function monitorPlayer(plr)
+	local function setupCharacter(char)
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not hum then return end
+
+		local function onHealthChanged(health)
+			if not active then return end
+			local below = health <= 20
+			local current = effects[plr]
+
+			if below then
+				if not current then
+					local h = Instance.new("Highlight")
+					h.FillColor = Color3.fromRGB(255, 0, 0)
+					h.OutlineColor = Color3.fromRGB(255, 0, 0)
+					h.Parent = char
+
+					local bb, label = createBillboard(hum)
+					bb.Parent = char:WaitForChild("Head")
+
+					effects[plr] = {Highlight = h, Billboard = bb, Label = label}
+				else
+					current.Label.Text = tostring(math.floor(health)) .. "%"
+				end
+			else
+				if current then
+					current.Highlight:Destroy()
+					current.Billboard:Destroy()
+					effects[plr] = nil
+				end
+			end
+		end
+
+		table.insert(connections, hum.HealthChanged:Connect(onHealthChanged))
+	end
+
+	if plr.Character then setupCharacter(plr.Character) end
+	plr.CharacterAdded:Connect(setupCharacter)
+end
+
+local function activate()
+	active = true
+	button.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			monitorPlayer(plr)
+		end
+	end
+	table.insert(connections, Players.PlayerAdded:Connect(function(plr)
+		if plr ~= player then monitorPlayer(plr) end
+	end))
+end
+
+local function deactivate()
+	active = false
+	button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	for _, c in ipairs(connections) do c:Disconnect() end
+	table.clear(connections)
+	for _, e in pairs(effects) do
+		if e.Highlight then e.Highlight:Destroy() end
+		if e.Billboard then e.Billboard:Destroy() end
+	end
+	table.clear(effects)
+end
+
+button.MouseButton1Click:Connect(function()
+	if active then deactivate() else activate() end
+end)
