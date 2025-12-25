@@ -1,0 +1,207 @@
+--// Services
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local Mouse = Player:GetMouse()
+
+-- Detect Mobile
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+--------------------------------------------------
+-- RESIZE SYSTEM
+--------------------------------------------------
+local resizeEnabled = false
+local function resizeParts(container)
+	if not resizeEnabled then return end
+	for _, part in ipairs(container:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Size = Vector3.new(5,5,5)
+			local mesh = part:FindFirstChildOfClass("SpecialMesh")
+			if mesh then
+				mesh.Scale = Vector3.new(10,10,10)
+			end
+		end
+	end
+end
+
+Workspace.ChildAdded:Connect(function(child)
+	if resizeEnabled and child.Name:match("^CLIENT_BALL_") then
+		resizeParts(child)
+	end
+end)
+
+-- Mobile GUI
+local resizeButton
+if isMobile then
+	local resizeGui = Instance.new("ScreenGui", PlayerGui)
+	resizeGui.Name = "ResizeToggleUI"
+	resizeButton = Instance.new("TextButton")
+	resizeButton.Size = UDim2.new(0,60,0,60)
+	resizeButton.Position = UDim2.new(0.05, 0, 0.8, 0)
+	resizeButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
+	resizeButton.TextColor3 = Color3.fromRGB(255,255,255)
+	resizeButton.Font = Enum.Font.GothamBold
+	resizeButton.TextSize = 14
+	resizeButton.Text = "OFF"
+	resizeButton.Draggable = true
+	resizeButton.Parent = resizeGui
+	local resizeCorner = Instance.new("UICorner")
+	resizeCorner.CornerRadius = UDim.new(1,0)
+	resizeCorner.Parent = resizeButton
+
+	resizeButton.MouseButton1Click:Connect(function()
+		resizeEnabled = not resizeEnabled
+		resizeButton.Text = resizeEnabled and "ON" or "OFF"
+		resizeButton.BackgroundColor3 = resizeEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(0,0,0)
+		if resizeEnabled then
+			for _, obj in ipairs(Workspace:GetChildren()) do
+				if obj.Name:match("^CLIENT_BALL_") then
+					resizeParts(obj)
+				end
+			end
+		end
+	end)
+end
+
+--------------------------------------------------
+-- SHIFTLOCK SYSTEM
+--------------------------------------------------
+local shiftlockEnabled = false
+local character = Player.Character or Player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+local shiftButton
+if isMobile then
+	local shiftGui = Instance.new("ScreenGui", PlayerGui)
+	shiftGui.Name = "ShiftLockUI"
+	shiftButton = Instance.new("TextButton")
+	shiftButton.Size = UDim2.new(0,50,0,50)
+	shiftButton.Position = UDim2.new(0.05,0,0.7,0)
+	shiftButton.BackgroundColor3 = Color3.fromRGB(40,40,40)
+	shiftButton.Text = "ðŸ”’"
+	shiftButton.TextScaled = true
+	shiftButton.TextColor3 = Color3.new(1,1,1)
+	shiftButton.Font = Enum.Font.GothamBold
+	shiftButton.Draggable = true
+	shiftButton.Parent = shiftGui
+	local shiftCorner = Instance.new("UICorner")
+	shiftCorner.CornerRadius = UDim.new(1,0)
+	shiftCorner.Parent = shiftButton
+
+	shiftButton.MouseButton1Click:Connect(function()
+		shiftlockEnabled = not shiftlockEnabled
+		shiftButton.BackgroundColor3 = shiftlockEnabled and Color3.fromRGB(0,170,255) or Color3.fromRGB(40,40,40)
+	end)
+end
+
+local function applyShiftLock()
+	if shiftlockEnabled then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UserInputService.MouseIconEnabled = false
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	if shiftlockEnabled and hrp then
+		local lv = camera.CFrame.LookVector
+		hrp.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + Vector3.new(lv.X,0,lv.Z))
+	end
+end)
+
+--------------------------------------------------
+-- DASH SYSTEM
+--------------------------------------------------
+local dashEnabled = false
+local dashPower = 100
+local dashTime = 0.12
+
+local dashButton
+if isMobile then
+	local dashGui = Instance.new("ScreenGui", PlayerGui)
+	dashGui.Name = "DashToggleUI"
+	dashButton = Instance.new("TextButton")
+	dashButton.Size = UDim2.new(0,60,0,60)
+	dashButton.Position = UDim2.new(0.05,0,0.6,0)
+	dashButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
+	dashButton.TextColor3 = Color3.fromRGB(255,255,255)
+	dashButton.Font = Enum.Font.GothamBold
+	dashButton.TextSize = 14
+	dashButton.Text = "Dash"
+	dashButton.Draggable = true
+	dashButton.Parent = dashGui
+	local dashCorner = Instance.new("UICorner")
+	dashCorner.CornerRadius = UDim.new(1,0)
+	dashCorner.Parent = dashButton
+
+	dashButton.MouseButton1Click:Connect(function()
+		dashEnabled = not dashEnabled
+		dashButton.BackgroundColor3 = dashEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(0,0,0)
+	end)
+end
+
+local function dashTo(pos)
+	local dir = (Vector3.new(pos.X, hrp.Position.Y, pos.Z) - hrp.Position).Unit
+	local bv = Instance.new("BodyVelocity")
+	bv.Velocity = Vector3.new(dir.X,0,dir.Z) * dashPower
+	bv.MaxForce = Vector3.new(400000,0,400000)
+	bv.P = 12500
+	bv.Parent = hrp
+	game.Debris:AddItem(bv, dashTime)
+end
+
+local humanoid = character:WaitForChild("Humanoid")
+local animator = humanoid:WaitForChild("Animator")
+local DASH_ANIM_ID = "rbxassetid://81476034712243"
+
+animator.AnimationPlayed:Connect(function(track)
+	if track.Animation and track.Animation.AnimationId == DASH_ANIM_ID and dashEnabled then
+		local closest, dist = nil, math.huge
+		for _, m in ipairs(Workspace:GetChildren()) do
+			if m:IsA("Model") and m.Name:match("^CLIENT_BALL_") then
+				local p = m.PrimaryPart and m.PrimaryPart.Position
+				if p then
+					local d = (hrp.Position - p).Magnitude
+					if d < dist then
+						dist, closest = d, p
+					end
+				end
+			end
+		end
+		if closest then dashTo(closest) end
+	end
+end)
+
+--------------------------------------------------
+-- PC Keybinds
+--------------------------------------------------
+if not isMobile then
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			local key = input.KeyCode
+			if key == Enum.KeyCode.X then -- Toggle Resize
+				resizeEnabled = not resizeEnabled
+			elseif key == Enum.KeyCode.Z then -- Toggle Dash
+				dashEnabled = not dashEnabled
+			elseif key == Enum.KeyCode.C then -- Toggle Shiftlock
+				shiftlockEnabled = not shiftlockEnabled
+				applyShiftLock()
+			end
+		end
+	end)
+end
+
+Player.CharacterAdded:Connect(function(char)
+	character = char
+	hrp = char:WaitForChild("HumanoidRootPart")
+	humanoid = char:WaitForChild("Humanoid")
+	animator = humanoid:WaitForChild("Animator")
+end)
