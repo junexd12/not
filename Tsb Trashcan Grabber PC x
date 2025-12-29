@@ -1,0 +1,140 @@
+-- SETTINGS
+local COOLDOWN = 1
+local HOLD_TIME = 1
+
+-- SERVICES
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- PLATFORM CHECK
+local IS_MOBILE = UserInputService.TouchEnabled
+local IS_PC = UserInputService.KeyboardEnabled and not IS_MOBILE
+
+-- CHARACTER BINDING (RESPAWN SAFE)
+local character, hrp, humanoid, communicate
+
+local function bindCharacter(char)
+	character = char
+	hrp = char:WaitForChild("HumanoidRootPart")
+	humanoid = char:WaitForChild("Humanoid")
+	communicate = char:WaitForChild("Communicate")
+end
+
+bindCharacter(player.Character or player.CharacterAdded:Wait())
+player.CharacterAdded:Connect(bindCharacter)
+
+-- COOLDOWN LOCK
+local busy = false
+
+-- MAIN ACTION
+local function runTrash()
+	if busy then return end
+	if not character or not hrp or not humanoid then return end
+	busy = true
+
+	local trashFolder = workspace.Map.Trash
+	local models = {}
+
+	for _, m in ipairs(trashFolder:GetChildren()) do
+		if m:IsA("Model") then
+			table.insert(models, m)
+		end
+	end
+	if #models == 0 then busy = false return end
+
+	getgenv().TrashIndex = getgenv().TrashIndex or 1
+
+	local originalCFrame = hrp.CFrame
+	local camCFrame = Camera.CFrame
+	local camType = Camera.CameraType
+	local oldAutoRotate = humanoid.AutoRotate
+
+	Camera.CameraType = Enum.CameraType.Scriptable
+	humanoid.AutoRotate = false
+
+	local checked = 0
+	local targetPart
+
+	while checked < #models do
+		if getgenv().TrashIndex > #models then
+			getgenv().TrashIndex = 1
+		end
+
+		local model = models[getgenv().TrashIndex]
+		getgenv().TrashIndex += 1
+		checked += 1
+
+		local part = model:FindFirstChild("Trashcan")
+		if part and part:IsA("BasePart") and part.CanCollide then
+			targetPart = part
+			break
+		end
+	end
+
+	if not targetPart then
+		Camera.CameraType = camType
+		Camera.CFrame = camCFrame
+		humanoid.AutoRotate = oldAutoRotate
+		busy = false
+		return
+	end
+
+	-- SNAP TP + FORCE LOOK
+	hrp.CFrame = CFrame.lookAt(
+		targetPart.Position - targetPart.CFrame.LookVector * 2,
+		targetPart.Position
+	)
+
+	task.wait(0.3)
+
+	-- M1
+	communicate:FireServer({ Goal = "LeftClick", Mobile = true })
+	communicate:FireServer({ Goal = "LeftClickRelease" })
+
+	task.wait(HOLD_TIME)
+
+	-- SNAP BACK
+	hrp.CFrame = originalCFrame
+
+	-- RESTORE
+	Camera.CameraType = camType
+	Camera.CFrame = camCFrame
+	task.wait(1)
+	humanoid.AutoRotate = oldAutoRotate
+
+	task.wait(COOLDOWN)
+	busy = false
+end
+
+-- 📱 MOBILE GUI
+if IS_MOBILE then
+	local gui = Instance.new("ScreenGui", player.PlayerGui)
+	gui.ResetOnSpawn = false
+
+	local button = Instance.new("TextButton", gui)
+	button.Size = UDim2.fromScale(0.1, 0.1)
+	button.Position = UDim2.fromScale(0.45, 0.7)
+	button.Text = "🗑️"
+	button.TextScaled = true
+	button.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	button.TextColor3 = Color3.new(1,1,1)
+	button.Draggable = true
+	button.Active = true
+	button.AutoButtonColor = false
+
+	Instance.new("UICorner", button).CornerRadius = UDim.new(1,0)
+
+	button.MouseButton1Click:Connect(runTrash)
+end
+
+-- 🖥️ PC KEYBIND (X)
+if IS_PC then
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Enum.KeyCode.X then
+			runTrash()
+		end
+	end)
+end
