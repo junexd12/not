@@ -1,7 +1,8 @@
--- PLAYER VISIBILITY TOGGLE
--- Excludes HumanoidRootPart and character.hitbox
--- Mobile: draggable circular 🫥 button
--- PC: X key only
+-- PLAYER VISIBILITY + BEAM ENFORCER
+-- Forces ALL parts of other players visible
+-- Adds forced blue beam to "ponto"
+-- Excludes HumanoidRootPart and hitbox
+-- PC: X key | Mobile: draggable button
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,22 +12,58 @@ local localPlayer = Players.LocalPlayer
 local enabled = false
 
 -- =====================
--- FORCE VISIBILITY
+-- BEAM SETTINGS
 -- =====================
-local function forceVisible(character)
-	for _, obj in ipairs(character:GetChildren()) do
+local BEAM_NAME = "ForcedBlueBeam"
+local BEAM_COLOR = Color3.fromRGB(0, 145, 250)
+local BEAM_LENGTH = 100
+
+local function createBeam(ponto: BasePart)
+	local a0 = ponto:FindFirstChild("BeamAttachment0") or Instance.new("Attachment")
+	a0.Name = "BeamAttachment0"
+	a0.Position = Vector3.zero
+	a0.Parent = ponto
+
+	local a1 = ponto:FindFirstChild("BeamAttachment1") or Instance.new("Attachment")
+	a1.Name = "BeamAttachment1"
+	a1.Position = Vector3.new(0, 0, BEAM_LENGTH)
+	a1.Parent = ponto
+
+	local beam = ponto:FindFirstChild(BEAM_NAME) or Instance.new("Beam")
+	beam.Name = BEAM_NAME
+	beam.Attachment0 = a0
+	beam.Attachment1 = a1
+	beam.Width0 = 0.2
+	beam.Width1 = 0.2
+	beam.FaceCamera = true
+	beam.Color = ColorSequence.new(BEAM_COLOR)
+	beam.Transparency = NumberSequence.new(0)
+	beam.LightEmission = 1
+	beam.LightInfluence = 0
+	beam.Enabled = true
+	beam.Parent = ponto
+end
+
+-- =====================
+-- FORCE EVERYTHING VISIBLE
+-- =====================
+local function enforceCharacter(character)
+	for _, obj in ipairs(character:GetDescendants()) do
 		if obj:IsA("BasePart") then
-			-- EXCLUSIONS (exactly like in the photo)
 			if obj.Name ~= "HumanoidRootPart" and obj.Name ~= "hitbox" then
 				obj.Transparency = 0
 				obj.LocalTransparencyModifier = 0
+			end
+
+			if obj.Name == "ponto" then
+				createBeam(obj)
 			end
 		end
 	end
 end
 
 -- =====================
--- LOOP (ANTI-INVIS)
+-- LOOP (ANTI-INVIS + ANTI-REMOVE)
 -- =====================
 RunService.RenderStepped:Connect(function()
 	if not enabled then return end
@@ -35,7 +72,7 @@ RunService.RenderStepped:Connect(function()
 		if player ~= localPlayer then
 			local char = player.Character
 			if char then
-				forceVisible(char)
+				enforceCharacter(char)
 			end
 		end
 	end
@@ -59,7 +96,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 end)
 
 -- =====================
--- MOBILE BUTTON (CIRCLE + DRAG)
+-- MOBILE BUTTON (DRAGGABLE)
 -- =====================
 if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 	local gui = Instance.new("ScreenGui")
@@ -80,7 +117,6 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = button
 
-	-- tap vs drag
 	local dragging = false
 	local moved = false
 	local dragStart
