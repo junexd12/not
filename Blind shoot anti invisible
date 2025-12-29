@@ -1,0 +1,123 @@
+-- PLAYER VISIBILITY TOGGLE
+-- Excludes HumanoidRootPart and character.hitbox
+-- Mobile: draggable circular 🫥 button
+-- PC: X key only
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local enabled = false
+
+-- =====================
+-- FORCE VISIBILITY
+-- =====================
+local function forceVisible(character)
+	for _, obj in ipairs(character:GetChildren()) do
+		if obj:IsA("BasePart") then
+			-- EXCLUSIONS (exactly like in the photo)
+			if obj.Name ~= "HumanoidRootPart" and obj.Name ~= "hitbox" then
+				obj.Transparency = 0
+				obj.LocalTransparencyModifier = 0
+			end
+		end
+	end
+end
+
+-- =====================
+-- LOOP (ANTI-INVIS)
+-- =====================
+RunService.RenderStepped:Connect(function()
+	if not enabled then return end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= localPlayer then
+			local char = player.Character
+			if char then
+				forceVisible(char)
+			end
+		end
+	end
+end)
+
+-- =====================
+-- TOGGLE
+-- =====================
+local function toggle()
+	enabled = not enabled
+end
+
+-- =====================
+-- PC → X KEY
+-- =====================
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.X then
+		toggle()
+	end
+end)
+
+-- =====================
+-- MOBILE BUTTON (CIRCLE + DRAG)
+-- =====================
+if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	local gui = Instance.new("ScreenGui")
+	gui.ResetOnSpawn = false
+	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.fromScale(0.09, 0.09)
+	button.Position = UDim2.fromScale(0.8, 0.8)
+	button.AnchorPoint = Vector2.new(0.5, 0.5)
+	button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	button.Text = "🫥"
+	button.TextScaled = true
+	button.TextColor3 = Color3.new(1, 1, 1)
+	button.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = button
+
+	-- tap vs drag
+	local dragging = false
+	local moved = false
+	local dragStart
+	local startPos
+	local TAP_THRESHOLD = 10
+
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			moved = false
+			dragStart = input.Position
+			startPos = button.Position
+		end
+	end)
+
+	button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			if not moved then
+				toggle()
+			end
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.Touch then
+			local delta = input.Position - dragStart
+			if delta.Magnitude > TAP_THRESHOLD then
+				moved = true
+			end
+
+			button.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
